@@ -1,0 +1,63 @@
+@import "tailwindcss";
+
+@layer base {
+  body {
+    font-family: 'Cairo', 'Tajawal', system-ui, -apple-system, sans-serif;
+    -webkit-tap-highlight-color: transparent;
+    user-select: none;
+    -webkit-user-select: none;
+  }
+}
+
+@keyframes voiceWave {
+  0%, 100% { height: 10px; transform: scaleY(0.6); }
+  50% { height: 36px; transform: scaleY(1); }
+}
+
+@keyframes softFloat {
+  0%, 100% { transform: translateY(0px) rotate(0deg); }
+  50% { transform: translateY(-10px) rotate(3deg); }
+}
+
+@keyframes gentleFloatReverse {
+  0%, 100% { transform: translateY(0px) rotate(0deg); }
+  50% { transform: translateY(10px) rotate(-4deg); }
+}
+
+@keyframes pulseRing {
+  0% { transform: scale(0.95); opacity: 0.8; }
+  50% { transform: scale(1.15); opacity: 0.25; }
+  100% { transform: scale(1.3); opacity: 0; }
+}
+
+@keyframes bounceSlow {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-6px); }
+}
+
+@keyframes sparkleSpin {
+  0% { transform: rotate(0deg) scale(0.85); opacity: 0.7; }
+  50% { transform: rotate(180deg) scale(1.15); opacity: 1; }
+  100% { transform: rotate(360deg) scale(0.85); opacity: 0.7; }
+}
+
+.animate-voice-wave-1 { animation: voiceWave 0.9s ease-in-out infinite; }
+.animate-voice-wave-2 { animation: voiceWave 1.1s ease-in-out infinite 0.15s; }
+.animate-voice-wave-3 { animation: voiceWave 0.75s ease-in-out infinite 0.35s; }
+.animate-voice-wave-4 { animation: voiceWave 1.05s ease-in-out infinite 0.1s; }
+.animate-voice-wave-5 { animation: voiceWave 0.85s ease-in-out infinite 0.25s; }
+
+.animate-soft-float { animation: softFloat 5s ease-in-out infinite; }
+.animate-float-reverse { animation: gentleFloatReverse 6s ease-in-out infinite; }
+.animate-pulse-ring { animation: pulseRing 2s cubic-bezier(0.24, 0, 0.38, 1) infinite; }
+.animate-bounce-slow { animation: bounceSlow 2.5s ease-in-out infinite; }
+.animate-sparkle-spin { animation: sparkleSpin 4s ease-in-out infinite; }
+
+/* Tactile 3D Toy Button effect */
+.btn-3d {
+  transition: all 0.15s ease;
+  position: relative;
+}
+.btn-3d:active {
+  transform: translateY(3px);
+}

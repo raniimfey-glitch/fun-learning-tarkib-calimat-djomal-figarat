@@ -1,0 +1,10 @@
+{
+  "name": "تركيب كلمات وجمل وفقرات",
+  "description": "تطبيق تعليمي تفاعلي ذكي للأطفال لتركيب الكلمات والجمل وفقرات القصص القصيرة مع نطق صوتي ودعم الذكاء الاصطناعي.",
+  "requestFramePermissions": [
+    "microphone"
+  ],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}
