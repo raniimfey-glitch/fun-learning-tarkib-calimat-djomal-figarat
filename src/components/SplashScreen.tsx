@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { Sparkles, Play, Volume2 } from 'lucide-react';
-import { playSuccessChime } from '../utils/soundEngine';
+import { playSuccessChime, stopAllSpeech } from '../utils/soundEngine';
 
 interface SplashScreenProps {
   isOpen: boolean;
@@ -10,6 +10,13 @@ interface SplashScreenProps {
 
 export const SplashScreen: React.FC<SplashScreenProps> = ({ isOpen, onClose }) => {
   const [activeDot, setActiveDot] = useState(0);
+
+  // Stop any active speech immediately whenever splash screen is open
+  useEffect(() => {
+    if (isOpen) {
+      stopAllSpeech();
+    }
+  }, [isOpen]);
 
   // Cycle the indicator dots to simulate active dynamic loading
   useEffect(() => {
@@ -21,7 +28,13 @@ export const SplashScreen: React.FC<SplashScreenProps> = ({ isOpen, onClose }) =
   }, [isOpen]);
 
   const handleStart = () => {
+    stopAllSpeech();
     playSuccessChime();
+    onClose();
+  };
+
+  const handleSkip = () => {
+    stopAllSpeech();
     onClose();
   };
 
@@ -108,14 +121,14 @@ export const SplashScreen: React.FC<SplashScreenProps> = ({ isOpen, onClose }) =
             تَطْبِيقٌ تَعْلِيمِيٌّ ذَكِيٌّ
           </span>
           <button
-            onClick={onClose}
-            className="text-xs font-bold text-slate-400 hover:text-white transition-colors px-3 py-1 rounded-full bg-white/5 border border-white/10 backdrop-blur-md"
+            onClick={handleSkip}
+            className="text-xs font-bold text-slate-400 hover:text-white transition-colors px-3 py-1 rounded-full bg-white/5 border border-white/10 backdrop-blur-md cursor-pointer"
           >
             تَخَطِّي
           </button>
         </div>
 
-        {/* ── 2. UPPER-MIDDLE AREA: 3D APP ICON WITH HARMONIZED NEON GLOW ── */}
+        {/* ── 2. UPPER-MIDDLE AREA: 3D ANIMATED APP ICON WITH HARMONIZED NEON GLOW ── */}
         <div className="flex flex-col items-center justify-center z-10 my-auto w-full max-w-sm">
           <motion.div
             initial={{ scale: 0.7, y: 30, opacity: 0 }}
@@ -143,17 +156,69 @@ export const SplashScreen: React.FC<SplashScreenProps> = ({ isOpen, onClose }) =
               className="absolute -inset-3 rounded-[30px] bg-gradient-to-tr from-rose-500 via-purple-500 to-cyan-400 blur-xl opacity-60 pointer-events-none"
             />
 
-            {/* High-Resolution Rounded-Square App Icon (border-radius: 20px) */}
-            <div className="relative w-28 h-28 sm:w-32 sm:h-32 rounded-[20px] p-[3px] bg-gradient-to-b from-white/60 via-purple-300/40 to-white/10 shadow-[0_20px_50px_rgba(168,85,247,0.45)] backdrop-blur-xl">
-              <div className="w-full h-full rounded-[17px] overflow-hidden bg-slate-900 border border-white/30">
+            {/* High-Resolution Rounded-Square App Icon with 3D Floating & Shimmer Animation */}
+            <motion.div
+              animate={{
+                y: [0, -12, 0],
+                rotate: [-2, 2.5, -2],
+                scale: [1, 1.04, 1],
+              }}
+              transition={{
+                duration: 4,
+                repeat: Infinity,
+                ease: 'easeInOut',
+              }}
+              whileHover={{ scale: 1.12, rotate: 0 }}
+              whileTap={{ scale: 0.95 }}
+              className="relative w-28 h-28 sm:w-32 sm:h-32 rounded-[20px] p-[3px] bg-gradient-to-b from-white/70 via-purple-300/40 to-white/10 shadow-[0_20px_50px_rgba(168,85,247,0.45)] backdrop-blur-xl cursor-pointer group select-none"
+            >
+              <div className="w-full h-full rounded-[17px] overflow-hidden bg-slate-900 border border-white/30 relative">
                 <img
                   src="/app-icon.jpg"
                   alt="أيقونة تركيب كلمات وجمل وفقرات"
                   referrerPolicy="no-referrer"
-                  className="w-full h-full object-cover"
+                  className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+                />
+
+                {/* Dynamic Light Sheen / Glass Shimmer Reflection sweeping across the icon */}
+                <motion.div
+                  animate={{
+                    x: ['-150%', '200%'],
+                  }}
+                  transition={{
+                    duration: 3,
+                    repeat: Infinity,
+                    repeatDelay: 2,
+                    ease: 'easeInOut',
+                  }}
+                  className="absolute inset-0 w-1/2 h-full bg-gradient-to-r from-transparent via-white/35 to-transparent -skew-x-12 pointer-events-none"
                 />
               </div>
-            </div>
+
+              {/* Little Floating Stars around the animated icon */}
+              <motion.span
+                animate={{
+                  scale: [0.8, 1.3, 0.8],
+                  rotate: [0, 90, 180],
+                  opacity: [0.4, 1, 0.4],
+                }}
+                transition={{ duration: 2.8, repeat: Infinity, ease: 'easeInOut' }}
+                className="absolute -top-2 -right-2 text-amber-300 text-base drop-shadow-[0_0_8px_rgba(252,211,77,0.8)] pointer-events-none"
+              >
+                ✨
+              </motion.span>
+              <motion.span
+                animate={{
+                  scale: [1.2, 0.7, 1.2],
+                  rotate: [180, 90, 0],
+                  opacity: [0.3, 0.9, 0.3],
+                }}
+                transition={{ duration: 3.2, repeat: Infinity, ease: 'easeInOut', delay: 1 }}
+                className="absolute -bottom-1 -left-2 text-cyan-300 text-sm drop-shadow-[0_0_8px_rgba(34,211,238,0.8)] pointer-events-none"
+              >
+                ⭐
+              </motion.span>
+            </motion.div>
           </motion.div>
 
           {/* ── 3. TYPOGRAPHY (CENTERED BELOW ICON) ── */}

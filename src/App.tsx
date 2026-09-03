@@ -15,6 +15,7 @@ import { LEVEL_CONFIGS, INITIAL_DATA } from './data/learningData';
 import {
   speakArabic,
   speakSyllablesSequential,
+  stopAllSpeech,
   playSuccessChime,
   playRetrySound,
   playTileSnapSound,
@@ -89,38 +90,72 @@ export default function App() {
     return true;
   });
 
-  const handleCloseSplash = useCallback(() => {
-    if (typeof window !== 'undefined') {
-      sessionStorage.setItem('arabic_app_splash_seen', 'true');
-    }
-    setShowSplash(false);
+  // Open Splash Screen safely (stopping any ongoing speech audio)
+  const handleOpenSplash = useCallback(() => {
+    stopAllSpeech();
+    setIsPlayingAudio(false);
+    setShowSplash(true);
   }, []);
 
   const currentQuestions = questionsData[level] || INITIAL_DATA[1];
   const currentQ = currentQuestions[questionIndex] || currentQuestions[0];
   const levelConfig = LEVEL_CONFIGS[level];
 
-  // Initialize and shuffle question
-  const initQuestion = useCallback((q: Question) => {
-    setPlacedTiles([]);
-    setAnsweredState('idle');
-    setAiFeedback(null);
-    setActionFeedback(null);
-    const shuffled = [...q.parts].sort(() => Math.random() - 0.5);
-    setShuffledTiles(shuffled);
+  // Close Splash Screen when user presses "ابدأ التعلم الآن" or "تخطي"
+  const handleCloseSplash = useCallback(() => {
+    if (typeof window !== 'undefined') {
+      sessionStorage.setItem('arabic_app_splash_seen', 'true');
+    }
+    setShowSplash(false);
+    stopAllSpeech();
 
-    // Pronounce the scrambled parts as displayed (not the connected word)
-    setIsPlayingAudio(true);
-    speakSyllablesSequential(shuffled, () => {
-      setIsPlayingAudio(false);
-    });
-  }, []);
+    // Now that the user actively touched the welcome screen to start,
+    // pronounce the question parts with a pleasant natural transition
+    setTimeout(() => {
+      setShuffledTiles((currentTiles) => {
+        const partsToSpeak = currentTiles.length > 0 ? currentTiles : currentQ?.parts || [];
+        if (partsToSpeak.length > 0) {
+          setIsPlayingAudio(true);
+          speakSyllablesSequential(partsToSpeak, () => {
+            setIsPlayingAudio(false);
+          });
+        }
+        return currentTiles;
+      });
+    }, 450);
+  }, [currentQ]);
+
+  // Initialize and shuffle question
+  const initQuestion = useCallback(
+    (q: Question, allowPronounce: boolean = true) => {
+      setPlacedTiles([]);
+      setAnsweredState('idle');
+      setAiFeedback(null);
+      setActionFeedback(null);
+      const shuffled = [...q.parts].sort(() => Math.random() - 0.5);
+      setShuffledTiles(shuffled);
+
+      // CRITICAL: NEVER auto-speak if the welcome splash screen is currently displayed!
+      // Audio speech must only begin after the child actively taps "ابدأ التعلم الآن".
+      if (allowPronounce && !showSplash) {
+        setIsPlayingAudio(true);
+        speakSyllablesSequential(shuffled, () => {
+          setIsPlayingAudio(false);
+        });
+      } else {
+        setIsPlayingAudio(false);
+        stopAllSpeech();
+      }
+    },
+    [showSplash]
+  );
 
   useEffect(() => {
     if (currentQ) {
-      initQuestion(currentQ);
+      // If splash screen is open, strictly prevent auto-speech until user interaction
+      initQuestion(currentQ, !showSplash);
     }
-  }, [level, questionIndex, currentQ, initQuestion]);
+  }, [level, questionIndex, currentQ, initQuestion, showSplash]);
 
   // Audio Pronunciation Trigger
   const handlePlaySound = useCallback(() => {
@@ -395,9 +430,20 @@ export default function App() {
         {/* Main Header Bar */}
         <div className="bg-white/95 backdrop-blur-md rounded-3xl p-3.5 sm:p-4 shadow-xl shadow-purple-500/5 flex items-center justify-between mb-3 border-2 border-purple-100">
           <div className="flex items-center gap-3">
-            <button
-              onClick={() => setShowSplash(true)}
-              className="w-12 h-12 sm:w-14 sm:h-14 rounded-2xl overflow-hidden shadow-md shadow-orange-500/20 border-2 border-white animate-bounce-slow shrink-0 bg-amber-100 cursor-pointer hover:scale-105 active:scale-95 transition-all text-right"
+            <motion.button
+              onClick={handleOpenSplash}
+              animate={{
+                y: [0, -4, 0],
+                rotate: [-1.5, 1.5, -1.5],
+              }}
+              transition={{
+                duration: 3,
+                repeat: Infinity,
+                ease: 'easeInOut',
+              }}
+              whileHover={{ scale: 1.08, rotate: 0 }}
+              whileTap={{ scale: 0.92 }}
+              className="w-12 h-12 sm:w-14 sm:h-14 rounded-2xl overflow-hidden shadow-md shadow-orange-500/20 border-2 border-white shrink-0 bg-amber-100 cursor-pointer transition-shadow hover:shadow-lg hover:shadow-purple-500/25 text-right relative group"
               title="فَتْحُ شَاشَةِ التَّرْحِيبِ"
             >
               <img
@@ -406,7 +452,10 @@ export default function App() {
                 referrerPolicy="no-referrer"
                 className="w-full h-full object-cover"
               />
-            </button>
+              <span className="absolute -top-1 -right-1 text-xs opacity-0 group-hover:opacity-100 transition-opacity">
+                ✨
+              </span>
+            </motion.button>
             <div>
               <div className="flex items-center gap-1.5">
                 <h1 className="text-lg sm:text-2xl font-black tracking-tight text-slate-900">
@@ -440,7 +489,7 @@ export default function App() {
             </div>
 
             <button
-              onClick={() => setShowSplash(true)}
+              onClick={handleOpenSplash}
               className="p-2.5 rounded-2xl bg-purple-50 hover:bg-purple-100 text-purple-700 border border-purple-200 shadow-xs transition-colors shrink-0 cursor-pointer"
               title="شَاشَةُ التَّرْحِيبِ"
             >
