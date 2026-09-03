@@ -101,69 +101,48 @@ export default function App() {
   const currentQ = currentQuestions[questionIndex] || currentQuestions[0];
   const levelConfig = LEVEL_CONFIGS[level];
 
-  // Close Splash Screen when user presses "ابدأ التعلم الآن" or "تخطي"
+  // Close Splash Screen
   const handleCloseSplash = useCallback(() => {
     if (typeof window !== 'undefined') {
       sessionStorage.setItem('arabic_app_splash_seen', 'true');
     }
     setShowSplash(false);
     stopAllSpeech();
+    setIsPlayingAudio(false);
+  }, []);
 
-    // Now that the user actively touched the welcome screen to start,
-    // pronounce the question parts with a pleasant natural transition
-    setTimeout(() => {
-      setShuffledTiles((currentTiles) => {
-        const partsToSpeak = currentTiles.length > 0 ? currentTiles : currentQ?.parts || [];
-        if (partsToSpeak.length > 0) {
-          setIsPlayingAudio(true);
-          speakSyllablesSequential(partsToSpeak, () => {
-            setIsPlayingAudio(false);
-          });
-        }
-        return currentTiles;
-      });
-    }, 450);
-  }, [currentQ]);
-
-  // Initialize and shuffle question
-  const initQuestion = useCallback(
-    (q: Question, allowPronounce: boolean = true) => {
-      setPlacedTiles([]);
-      setAnsweredState('idle');
-      setAiFeedback(null);
-      setActionFeedback(null);
-      const shuffled = [...q.parts].sort(() => Math.random() - 0.5);
-      setShuffledTiles(shuffled);
-
-      // CRITICAL: NEVER auto-speak if the welcome splash screen is currently displayed!
-      // Audio speech must only begin after the child actively taps "ابدأ التعلم الآن".
-      if (allowPronounce && !showSplash) {
-        setIsPlayingAudio(true);
-        speakSyllablesSequential(shuffled, () => {
-          setIsPlayingAudio(false);
-        });
-      } else {
-        setIsPlayingAudio(false);
-        stopAllSpeech();
-      }
-    },
-    [showSplash]
-  );
+  // Initialize and shuffle question (Manual pronunciation only upon clicking the listen button)
+  const initQuestion = useCallback((q: Question) => {
+    stopAllSpeech();
+    setIsPlayingAudio(false);
+    setPlacedTiles([]);
+    setAnsweredState('idle');
+    setAiFeedback(null);
+    setActionFeedback(null);
+    const shuffled = [...q.parts].sort(() => Math.random() - 0.5);
+    setShuffledTiles(shuffled);
+  }, []);
 
   useEffect(() => {
     if (currentQ) {
-      // If splash screen is open, strictly prevent auto-speech until user interaction
-      initQuestion(currentQ, !showSplash);
+      initQuestion(currentQ);
     }
-  }, [level, questionIndex, currentQ, initQuestion, showSplash]);
+  }, [level, questionIndex, currentQ, initQuestion]);
 
-  // Audio Pronunciation Trigger
+  // Audio Pronunciation Trigger: activates strictly upon clicking the sound button
   const handlePlaySound = useCallback(() => {
     if (!currentQ) return;
+    stopAllSpeech();
     setIsPlayingAudio(true);
 
     if (answeredState === 'correct') {
-      setActionFeedback('🔊 اِسْتَمِعْ لِلنُّطْقِ الصَّحِيحِ');
+      setActionFeedback(
+        level === 3
+          ? '🔊 اِسْتَمِعْ لِلْقِصَّةِ'
+          : level === 2
+          ? '🔊 اِسْتَمِعْ لِلْجُمْلَةِ'
+          : '🔊 اِسْتَمِعْ لِلْكَلِمَةِ'
+      );
       speakArabic(currentQ.word, {
         rate: level === 3 ? 0.9 : 0.82,
         onEnd: () => {
@@ -174,12 +153,13 @@ export default function App() {
     } else {
       setActionFeedback(
         level === 1
-          ? '🔊 اِسْتَمِعْ لِلْمَقَاطِعِ المُشَوَّشَةِ'
+          ? '🔊 اِسْتَمِعْ لِلْمَقَاطِعِ'
           : level === 2
-          ? '🔊 اِسْتَمِعْ لِلْكَلِمَاتِ المُشَوَّشَةِ'
-          : '🔊 اِسْتَمِعْ لِلْجُمَلِ المُشَوَّشَةِ'
+          ? '🔊 اِسْتَمِعْ لِلْكَلِمَاتِ'
+          : '🔊 اِسْتَمِعْ لِلْجُمَلِ'
       );
-      speakSyllablesSequential(shuffledTiles, () => {
+      const partsToSpeak = shuffledTiles.length > 0 ? shuffledTiles : currentQ.parts;
+      speakSyllablesSequential(partsToSpeak, () => {
         setIsPlayingAudio(false);
         setTimeout(() => setActionFeedback(null), 1500);
       });
@@ -224,6 +204,8 @@ export default function App() {
 
   // Next Question Button Handler
   const handleNext = useCallback(() => {
+    stopAllSpeech();
+    setIsPlayingAudio(false);
     if (questionIndex + 1 < currentQuestions.length) {
       setQuestionIndex((prev) => prev + 1);
       setActionFeedback('السُّؤَالُ التَّالِي');
@@ -234,6 +216,8 @@ export default function App() {
 
   // Previous Question
   const handlePrevious = useCallback(() => {
+    stopAllSpeech();
+    setIsPlayingAudio(false);
     if (questionIndex > 0) {
       setQuestionIndex((prev) => prev - 1);
       setActionFeedback('السُّؤَالُ السَّابِقُ');
@@ -242,6 +226,8 @@ export default function App() {
 
   // Clear / Retry
   const handleRetry = useCallback(() => {
+    stopAllSpeech();
+    setIsPlayingAudio(false);
     setPlacedTiles([]);
     setAnsweredState('idle');
     playTileSnapSound();
@@ -250,6 +236,8 @@ export default function App() {
 
   // Switch Level
   const handleSwitchLevel = useCallback((newLevel: LevelId) => {
+    stopAllSpeech();
+    setIsPlayingAudio(false);
     setLevel(newLevel);
     setQuestionIndex(0);
     setScore(0);
@@ -613,9 +601,17 @@ export default function App() {
             <div className="flex items-center justify-center mt-3">
               <button
                 onClick={handlePlaySound}
-                className="inline-flex items-center gap-2 px-6 py-2.5 rounded-2xl bg-gradient-to-r from-amber-400 to-orange-400 hover:from-amber-500 hover:to-orange-500 text-amber-950 font-black text-base sm:text-lg shadow-md border-b-4 border-amber-600 active:translate-y-1 active:border-b-0 transition-all"
+                className={`inline-flex items-center gap-2 px-6 py-2.5 sm:py-3 rounded-2xl font-black text-base sm:text-lg shadow-md border-b-4 active:translate-y-1 active:border-b-0 transition-all cursor-pointer ${
+                  isPlayingAudio ? 'ring-4 ring-cyan-400 scale-[1.02]' : 'hover:scale-105'
+                } ${
+                  level === 1
+                    ? 'bg-gradient-to-r from-amber-400 via-orange-400 to-amber-500 text-amber-950 border-amber-600 shadow-orange-500/20'
+                    : level === 2
+                    ? 'bg-gradient-to-r from-purple-500 via-indigo-500 to-sky-500 text-white border-indigo-700 shadow-indigo-500/20'
+                    : 'bg-gradient-to-r from-emerald-500 via-teal-500 to-cyan-500 text-white border-teal-700 shadow-teal-500/20'
+                }`}
               >
-                <Volume2 className="w-5 h-5 sm:w-6 sm:h-6" />
+                <Volume2 className={`w-5 h-5 sm:w-6 sm:h-6 ${isPlayingAudio ? 'animate-bounce' : ''}`} />
                 <span>
                   {answeredState === 'correct'
                     ? level === 3
