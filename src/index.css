@@ -73,3 +73,38 @@
   -ms-overflow-style: none;
   scrollbar-width: none;
 }
+
+@keyframes readingTileBlink {
+  0%, 100% {
+    filter: brightness(1) drop-shadow(0 0 0px rgba(250, 204, 21, 0));
+    opacity: 1;
+    transform: translateY(-8px) scale(1.15);
+  }
+  50% {
+    filter: brightness(1.25) drop-shadow(0 0 20px rgba(250, 204, 21, 0.95));
+    opacity: 0.82;
+    transform: translateY(-8px) scale(1.22);
+  }
+}
+
+@keyframes readingSentenceBlink {
+  0%, 100% {
+    filter: brightness(1) drop-shadow(0 0 0px rgba(20, 184, 166, 0));
+    opacity: 1;
+    transform: translateY(-4px) scale(1.02);
+  }
+  50% {
+    filter: brightness(1.2) drop-shadow(0 0 16px rgba(20, 184, 166, 0.9));
+    opacity: 0.86;
+    transform: translateY(-4px) scale(1.04);
+  }
+}
+
+.animate-reading-tile-blink {
+  animation: readingTileBlink 0.55s ease-in-out infinite;
+}
+
+.animate-reading-sentence-blink {
+  animation: readingSentenceBlink 0.55s ease-in-out infinite;
+}
+

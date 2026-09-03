@@ -15,13 +15,11 @@ export const SplashScreen: React.FC<SplashScreenProps> = ({
 }) => {
   const [stage, setStage] = useState<'icon' | 'welcome'>(initialStage);
   const [activeDot, setActiveDot] = useState(0);
-  const [secondsLeft, setSecondsLeft] = useState(5);
 
   // Sync stage whenever opened with a specific initialStage
   useEffect(() => {
     if (isOpen) {
       setStage(initialStage);
-      setSecondsLeft(5);
       stopAllSpeech();
     }
   }, [isOpen, initialStage]);
@@ -35,7 +33,7 @@ export const SplashScreen: React.FC<SplashScreenProps> = ({
     return () => clearTimeout(timer);
   }, [isOpen, stage]);
 
-  // Stage 2 (Welcome Screen): Auto-dismiss after exactly 5 seconds (5000ms) and enter main app
+  // Stage 2 (Welcome Screen): Auto-transition to main app after 5 seconds
   useEffect(() => {
     if (!isOpen || stage !== 'welcome') return;
     const timer = setTimeout(() => {
@@ -43,16 +41,6 @@ export const SplashScreen: React.FC<SplashScreenProps> = ({
     }, 5000);
     return () => clearTimeout(timer);
   }, [isOpen, stage, onClose]);
-
-  // 1-second interval countdown for visual progress during Stage 2
-  useEffect(() => {
-    if (!isOpen || stage !== 'welcome') return;
-    setSecondsLeft(5);
-    const interval = setInterval(() => {
-      setSecondsLeft((prev) => (prev > 1 ? prev - 1 : 0));
-    }, 1000);
-    return () => clearInterval(interval);
-  }, [isOpen, stage]);
 
   // Cycle the indicator dots to simulate active dynamic loading
   useEffect(() => {
@@ -154,7 +142,8 @@ export const SplashScreen: React.FC<SplashScreenProps> = ({
               animate={{ opacity: 1, scale: 1 }}
               exit={{ opacity: 0, scale: 1.03 }}
               transition={{ duration: 0.6, ease: 'easeInOut' }}
-              className="relative w-full h-full flex flex-col items-center justify-between text-center px-4 py-8 sm:py-12 bg-[#021b18]"
+              onClick={onClose}
+              className="relative w-full h-full flex flex-col items-center justify-between text-center px-4 py-8 sm:py-12 bg-[#021b18] cursor-pointer"
             >
               {/* ── FLUID AMBIENT GLOW & ENERGY WAVES IN BRAND TEAL (#00C9B7) ── */}
               <div className="absolute inset-0 pointer-events-none overflow-hidden">
@@ -217,26 +206,6 @@ export const SplashScreen: React.FC<SplashScreenProps> = ({
                 ))}
 
                 <div className="absolute -inset-full bg-gradient-to-tr from-transparent via-white/[0.04] to-transparent rotate-45 pointer-events-none" />
-              </div>
-
-              {/* ── TOP BAR: Direct Skip / Enter Button ── */}
-              <div className="w-full flex items-center justify-between z-20 max-w-sm px-2">
-                <button
-                  onClick={onClose}
-                  className="px-3.5 py-1.5 rounded-full bg-white/10 hover:bg-white/20 active:scale-95 text-teal-200 border border-white/20 text-xs font-black transition-all flex items-center gap-1.5 shadow-sm backdrop-blur-md cursor-pointer"
-                  title="الدُّخُولُ الفَوْرِيُّ لِلتَّطْبِيقِ"
-                >
-                  <span>تَخَطٍّ</span>
-                  <span>({secondsLeft}ث) ⏭</span>
-                </button>
-
-                <button
-                  onClick={onClose}
-                  className="w-8 h-8 rounded-full bg-white/10 hover:bg-white/20 active:scale-95 text-white/80 hover:text-white flex items-center justify-center text-sm font-bold border border-white/20 transition-all cursor-pointer"
-                  title="إِغْلاق"
-                >
-                  ✕
-                </button>
               </div>
 
               {/* ── UPPER-MIDDLE AREA: 3D ANIMATED APP ICON WITH BRAND TEAL NEON GLOW ── */}
@@ -361,8 +330,8 @@ export const SplashScreen: React.FC<SplashScreenProps> = ({
                 </motion.div>
               </div>
 
-              {/* ── 5. BOTTOM AREA: 3 INDICATOR DOTS & 5-SECOND PROGRESS BAR ── */}
-              <div className="w-full flex flex-col items-center gap-3 z-10 max-w-sm mt-auto">
+              {/* ── 5. BOTTOM FOOTER AREA (تذييل الشاشة الترحيبية) ── */}
+              <div className="w-full flex flex-col items-center gap-3 z-10 max-w-lg mt-auto pb-2 px-2">
                 {/* 3 Animated Indicator Dots */}
                 <div className="flex items-center justify-center gap-2.5 pt-1">
                   {[0, 1, 2].map((idx) => {
@@ -385,19 +354,12 @@ export const SplashScreen: React.FC<SplashScreenProps> = ({
                   })}
                 </div>
 
-                {/* 5-Second Smooth Progress Bar to Main App */}
-                <div className="w-full max-w-xs h-1.5 rounded-full bg-white/10 overflow-hidden relative shadow-inner">
-                  <motion.div
-                    initial={{ width: '0%' }}
-                    animate={{ width: '100%' }}
-                    transition={{ duration: 5, ease: 'linear' }}
-                    className="h-full bg-gradient-to-r from-[#00C9B7] via-teal-300 to-cyan-300 rounded-full shadow-[0_0_8px_#00C9B7]"
-                  />
+                {/* Footer Notice & Copyright */}
+                <div className="w-full px-4 py-2.5 rounded-2xl bg-black/35 backdrop-blur-md border border-white/10 shadow-lg text-center">
+                  <p className="text-xs sm:text-sm font-bold text-teal-100/90 leading-relaxed tracking-wide drop-shadow-sm">
+                    التعلم الممتع - تركيب كلمات وجمل وفقرات - سميرة عبد الصدوق جميع الحقوق محفوظة
+                  </p>
                 </div>
-
-                <span className="text-[11px] text-teal-300/80 font-bold">
-                  الانْتِقَالُ لِلْوَاجِهَةِ الرَّئِيسِيَّةِ خِلالَ {secondsLeft} ثَوَانٍ...
-                </span>
               </div>
             </motion.div>
           )}

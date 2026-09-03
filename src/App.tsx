@@ -1,7 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import {
-  Volume2,
   Mic,
   Star,
   ArrowLeft,
@@ -118,6 +117,7 @@ export default function App() {
   const [shuffledTiles, setShuffledTiles] = useState<string[]>([]);
   const [answeredState, setAnsweredState] = useState<'idle' | 'correct' | 'wrong'>('idle');
   const [isPlayingAudio, setIsPlayingAudio] = useState(false);
+  const [activeReadingIndex, setActiveReadingIndex] = useState<number | null>(null);
   const [actionFeedback, setActionFeedback] = useState<string | null>(null);
 
   // AI Pronunciation State
@@ -143,6 +143,7 @@ export default function App() {
   const handleOpenSplash = useCallback(() => {
     stopAllSpeech();
     setIsPlayingAudio(false);
+    setActiveReadingIndex(null);
     setIntroState({ isOpen: true, initialStage: 'welcome' });
   }, []);
 
@@ -155,12 +156,14 @@ export default function App() {
     setIntroState((prev) => ({ ...prev, isOpen: false }));
     stopAllSpeech();
     setIsPlayingAudio(false);
+    setActiveReadingIndex(null);
   }, []);
 
   // Initialize and shuffle question (Manual pronunciation only upon clicking the listen button)
   const initQuestion = useCallback((q: Question) => {
     stopAllSpeech();
     setIsPlayingAudio(false);
+    setActiveReadingIndex(null);
     setPlacedTiles([]);
     setAnsweredState('idle');
     setAiFeedback(null);
@@ -182,6 +185,7 @@ export default function App() {
     setIsPlayingAudio(true);
 
     if (answeredState === 'correct') {
+      setActiveReadingIndex(null);
       setActionFeedback(
         level === 3
           ? '🔊 اِسْتَمِعْ لِلْقِصَّةِ'
@@ -193,6 +197,7 @@ export default function App() {
         rate: level === 3 ? 0.9 : 0.82,
         onEnd: () => {
           setIsPlayingAudio(false);
+          setActiveReadingIndex(null);
           setTimeout(() => setActionFeedback(null), 1500);
         },
       });
@@ -205,16 +210,27 @@ export default function App() {
           : '🔊 اِسْتَمِعْ لِلْجُمَلِ'
       );
       const partsToSpeak = shuffledTiles.length > 0 ? shuffledTiles : currentQ.parts;
-      speakSyllablesSequential(partsToSpeak, () => {
-        setIsPlayingAudio(false);
-        setTimeout(() => setActionFeedback(null), 1500);
-      });
+      speakSyllablesSequential(
+        partsToSpeak,
+        () => {
+          setIsPlayingAudio(false);
+          setActiveReadingIndex(null);
+          setTimeout(() => setActionFeedback(null), 1500);
+        },
+        level === 3 ? 0.85 : 0.8,
+        (stepIndex) => {
+          setActiveReadingIndex(stepIndex >= 0 ? stepIndex : null);
+        }
+      );
     }
   }, [currentQ, answeredState, level, shuffledTiles]);
 
   // Verify Answer with Confetti & Sounds
   const handleVerify = useCallback(() => {
     if (!currentQ || answeredState !== 'idle') return;
+    stopAllSpeech();
+    setIsPlayingAudio(false);
+    setActiveReadingIndex(null);
 
     const userText = placedTiles.map((t) => t.text).join('|');
     const correctText = currentQ.parts.join('|');
@@ -252,6 +268,7 @@ export default function App() {
   const handleNext = useCallback(() => {
     stopAllSpeech();
     setIsPlayingAudio(false);
+    setActiveReadingIndex(null);
     if (questionIndex + 1 < currentQuestions.length) {
       setQuestionIndex((prev) => prev + 1);
       setActionFeedback('السُّؤَالُ التَّالِي');
@@ -264,6 +281,7 @@ export default function App() {
   const handlePrevious = useCallback(() => {
     stopAllSpeech();
     setIsPlayingAudio(false);
+    setActiveReadingIndex(null);
     if (questionIndex > 0) {
       setQuestionIndex((prev) => prev - 1);
       setActionFeedback('السُّؤَالُ السَّابِقُ');
@@ -274,6 +292,7 @@ export default function App() {
   const handleRetry = useCallback(() => {
     stopAllSpeech();
     setIsPlayingAudio(false);
+    setActiveReadingIndex(null);
     setPlacedTiles([]);
     setAnsweredState('idle');
     playTileSnapSound();
@@ -287,6 +306,7 @@ export default function App() {
   const handleSwitchLevel = useCallback((newLevel: LevelId) => {
     stopAllSpeech();
     setIsPlayingAudio(false);
+    setActiveReadingIndex(null);
     setLevel(newLevel);
     setQuestionIndex(0);
     setScore(0);
@@ -300,6 +320,10 @@ export default function App() {
 
       const isAlreadyPlaced = placedTiles.some((t) => t.originalIndex === originalIndex);
       if (isAlreadyPlaced) return;
+
+      stopAllSpeech();
+      setIsPlayingAudio(false);
+      setActiveReadingIndex(null);
 
       playTileSnapSound();
       speakArabic(tileText.replace(/[ـ\-]/g, ''));
@@ -315,6 +339,9 @@ export default function App() {
   const handleReturnTile = useCallback(
     (placedIndex: number) => {
       if (answeredState === 'correct') return;
+      stopAllSpeech();
+      setIsPlayingAudio(false);
+      setActiveReadingIndex(null);
       playTileSnapSound();
       setPlacedTiles((prev) => prev.filter((_, idx) => idx !== placedIndex));
     },
@@ -325,6 +352,9 @@ export default function App() {
   const handleVoiceCorrectAnswer = useCallback(
     (matchedIndices?: number[]) => {
       if (!currentQ || answeredState === 'correct') return;
+      stopAllSpeech();
+      setIsPlayingAudio(false);
+      setActiveReadingIndex(null);
 
       // Full match for Words, Sentences, or Full Story
       if (!matchedIndices || matchedIndices.length >= currentQ.parts.length) {
@@ -653,37 +683,6 @@ export default function App() {
             >
               <span className="animate-soft-float">{currentQ.emoji}</span>
             </div>
-
-            {/* Sound Action Button */}
-            <div className="flex items-center justify-center mt-3">
-              <button
-                onClick={handlePlaySound}
-                className={`inline-flex items-center gap-2 px-6 py-2.5 sm:py-3 rounded-2xl font-black text-base sm:text-lg shadow-md border-b-4 active:translate-y-1 active:border-b-0 transition-all cursor-pointer ${
-                  isPlayingAudio ? 'ring-4 ring-cyan-400 scale-[1.02]' : 'hover:scale-105'
-                } ${
-                  level === 1
-                    ? 'bg-gradient-to-r from-amber-400 via-orange-400 to-amber-500 text-amber-950 border-amber-600 shadow-orange-500/20'
-                    : level === 2
-                    ? 'bg-gradient-to-r from-purple-500 via-indigo-500 to-sky-500 text-white border-indigo-700 shadow-indigo-500/20'
-                    : 'bg-gradient-to-r from-emerald-500 via-teal-500 to-cyan-500 text-white border-teal-700 shadow-teal-500/20'
-                }`}
-              >
-                <Volume2 className={`w-5 h-5 sm:w-6 sm:h-6 ${isPlayingAudio ? 'animate-bounce' : ''}`} />
-                <span>
-                  {answeredState === 'correct'
-                    ? level === 3
-                      ? '🔊 اِسْتَمِعْ لِلْقِصَّةِ'
-                      : level === 2
-                      ? '🔊 اِسْتَمِعْ لِلْجُمْلَةِ'
-                      : '🔊 اِسْتَمِعْ لِلْكَلِمَةِ'
-                    : level === 1
-                    ? '🔊 اِسْتَمِعْ لِلْمَقَاطِعِ'
-                    : level === 2
-                    ? '🔊 اِسْتَمِعْ لِلْكَلِمَاتِ'
-                    : '🔊 اِسْتَمِعْ لِلْجُمَلِ'}
-                </span>
-              </button>
-            </div>
           </div>
 
           {/* Voice Spectrum Visualizer Waves */}
@@ -863,13 +862,13 @@ export default function App() {
           </div>
 
           {/* Guide hint */}
-          <div className="text-xs sm:text-sm font-extrabold text-slate-500 mb-2">
-            {level === 3
-              ? '👆 اِضْغَطْ عَلَى الجُمَلِ بِالتَّرْتِيبِ الزَّمَنِيِّ لِتَكْوِينِ القِصَّةِ:'
-              : level === 2
-              ? '👆 رَتِّبِ الكَلِمَاتِ فِي سَطْرٍ وَاحِدٍ لِتَكْوِينِ الجُمْلَةِ:'
-              : '👆 اِضْغَطْ عَلَى البِطَاقَاتِ بِالتَّرْتِيبِ لِوَضْعِهَا فِي المَكَانِ الصَّحِيحِ:'}
-          </div>
+          {level !== 2 && (
+            <div className="text-xs sm:text-sm font-extrabold text-slate-500 mb-2">
+              {level === 3
+                ? '👆 اِضْغَطْ عَلَى الجُمَلِ بِالتَّرْتِيبِ الزَّمَنِيِّ لِتَكْوِينِ القِصَّةِ:'
+                : '👆 اِضْغَطْ عَلَى البِطَاقَاتِ بِالتَّرْتِيبِ لِوَضْعِهَا فِي المَكَانِ الصَّحِيحِ:'}
+            </div>
+          )}
 
           {/* ── AVAILABLE TILES POOL (Juicy 3D Learning Blocks / Sentence Strips) ── */}
           {level === 3 ? (
@@ -877,6 +876,7 @@ export default function App() {
               {shuffledTiles.map((part, originalIdx) => {
                 const isUsed = placedTiles.some((t) => t.originalIndex === originalIdx);
                 const colorTheme = TILE_COLOR_SCHEMES[originalIdx % TILE_COLOR_SCHEMES.length];
+                const isReading = activeReadingIndex === originalIdx;
 
                 if (isUsed) return null;
 
@@ -885,32 +885,51 @@ export default function App() {
                     key={`${part}-${originalIdx}`}
                     disabled={answeredState === 'correct'}
                     onClick={() => handlePlaceTile(part, originalIdx)}
-                    className={`w-full p-3.5 sm:p-4 rounded-2xl font-bold text-base sm:text-lg shadow-md border-2 border-b-4 transition-all text-right flex items-center gap-3 ${colorTheme.bg} ${colorTheme.border} ${colorTheme.text} ${colorTheme.shadow} hover:scale-[1.01] active:translate-y-1 active:border-b-0`}
+                    className={`w-full p-3.5 sm:p-4 rounded-2xl font-bold text-base sm:text-lg shadow-md border-2 border-b-4 transition-all text-right flex items-center gap-3 relative ${
+                      isReading
+                        ? 'animate-reading-sentence-blink z-30 ring-4 ring-teal-400 ring-offset-4 ring-offset-white border-teal-600 shadow-2xl shadow-teal-500/60 bg-gradient-to-r from-teal-100 via-emerald-100 to-teal-200 text-teal-950 font-black'
+                        : `${colorTheme.bg} ${colorTheme.border} ${colorTheme.text} ${colorTheme.shadow} hover:scale-[1.01] active:translate-y-1 active:border-b-0`
+                    }`}
                   >
-                    <span className="w-7 h-7 rounded-full bg-white/90 border border-slate-300 text-sm flex items-center justify-center shrink-0 font-black">
-                      🔹
+                    <span
+                      className={`w-7 h-7 rounded-full border text-sm flex items-center justify-center shrink-0 font-black ${
+                        isReading
+                          ? 'bg-teal-600 text-white border-teal-700 animate-bounce'
+                          : 'bg-white/90 border-slate-300'
+                      }`}
+                    >
+                      {isReading ? '🔊' : '🔹'}
                     </span>
                     <span className="leading-relaxed flex-1">{part}</span>
+                    {isReading && (
+                      <span className="px-2.5 py-1 rounded-full bg-teal-600 text-white text-xs font-black shadow-md flex items-center gap-1.5 animate-bounce shrink-0">
+                        <span>قِرَاءَةٌ...</span>
+                        <span className="w-2 h-2 rounded-full bg-white animate-ping" />
+                      </span>
+                    )}
                   </button>
                 );
               })}
             </div>
           ) : level === 2 ? (
-            /* ── LEVEL 2: CANDIDATE WORDS IN A SINGLE STRAIGHT LINE ── */
+            /* ── LEVEL 2: CANDIDATE WORDS ── */
             <div className="w-full flex items-center justify-center mb-3 min-h-[64px]">
-              <div className="flex flex-nowrap items-center justify-center gap-2 sm:gap-3 w-full overflow-x-auto py-1 px-1 no-scrollbar">
+              <div className="flex flex-wrap items-center justify-center gap-2.5 sm:gap-3.5 w-full py-1.5 px-1">
                 {shuffledTiles.map((part, originalIdx) => {
                   const isUsed = placedTiles.some((t) => t.originalIndex === originalIdx);
                   const colorTheme = TILE_COLOR_SCHEMES[originalIdx % TILE_COLOR_SCHEMES.length];
+                  const isReading = activeReadingIndex === originalIdx;
 
                   return (
                     <button
                       key={`${part}-${originalIdx}`}
                       disabled={isUsed || answeredState === 'correct'}
                       onClick={() => handlePlaceTile(part, originalIdx)}
-                      className={`px-3.5 py-2 sm:px-5 sm:py-2.5 md:px-6 md:py-3 rounded-2xl font-black text-xl sm:text-2xl md:text-3xl shadow-md border-2 border-b-4 transition-all whitespace-nowrap shrink-0 leading-normal ${
+                      className={`px-4 py-2.5 sm:px-6 sm:py-3.5 rounded-2xl font-black text-2xl sm:text-3xl shadow-md border-2 border-b-4 transition-all whitespace-nowrap leading-normal relative select-none ${
                         isUsed
                           ? 'opacity-0 pointer-events-none scale-50'
+                          : isReading
+                          ? 'animate-reading-tile-blink z-30 ring-4 ring-purple-500 ring-offset-4 ring-offset-white border-purple-600 shadow-2xl shadow-purple-500/70 bg-gradient-to-b from-purple-200 via-purple-100 to-purple-300 text-purple-950 font-black cursor-pointer'
                           : `${colorTheme.bg} ${colorTheme.border} ${colorTheme.text} ${colorTheme.shadow} hover:scale-105 active:translate-y-1 active:border-b-0 cursor-pointer`
                       }`}
                     >
@@ -925,18 +944,27 @@ export default function App() {
               {shuffledTiles.map((part, originalIdx) => {
                 const isUsed = placedTiles.some((t) => t.originalIndex === originalIdx);
                 const colorTheme = TILE_COLOR_SCHEMES[originalIdx % TILE_COLOR_SCHEMES.length];
+                const isReading = activeReadingIndex === originalIdx;
 
                 return (
                   <button
                     key={`${part}-${originalIdx}`}
                     disabled={isUsed || answeredState === 'correct'}
                     onClick={() => handlePlaceTile(part, originalIdx)}
-                    className={`px-5 py-3.5 sm:px-7 sm:py-4 rounded-3xl font-black text-3xl sm:text-4xl shadow-md border-2 border-b-4 transition-all leading-snug tracking-wider ${
+                    className={`px-5 py-3.5 sm:px-7 sm:py-4 rounded-3xl font-black text-3xl sm:text-4xl shadow-md border-2 border-b-4 transition-all leading-snug tracking-wider relative ${
                       isUsed
                         ? 'opacity-0 pointer-events-none scale-50'
+                        : isReading
+                        ? 'animate-reading-tile-blink z-30 ring-4 ring-amber-400 ring-offset-4 ring-offset-white border-amber-500 shadow-2xl shadow-amber-500/60 bg-gradient-to-b from-amber-200 via-amber-100 to-amber-300 text-amber-950 font-black cursor-pointer'
                         : `${colorTheme.bg} ${colorTheme.border} ${colorTheme.text} ${colorTheme.shadow} hover:scale-105 active:translate-y-1 active:border-b-0`
                     }`}
                   >
+                    {isReading && (
+                      <span className="absolute -top-3.5 -right-2 px-2 py-0.5 rounded-full bg-amber-500 text-white text-[11px] font-black shadow-lg flex items-center gap-1 animate-bounce pointer-events-none z-40">
+                        <span>🔊</span>
+                        <span className="w-2 h-2 rounded-full bg-white animate-ping" />
+                      </span>
+                    )}
                     {part}
                   </button>
                 );

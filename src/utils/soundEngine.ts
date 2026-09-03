@@ -19,11 +19,13 @@ function getAudioContext(): AudioContext {
 }
 
 let sequenceTimer: any = null;
+let activeSequenceId = 0;
 
 /**
  * Stop any active speech and clear sequence timers
  */
 export function stopAllSpeech() {
+  activeSequenceId++;
   if (sequenceTimer) {
     clearTimeout(sequenceTimer);
     sequenceTimer = null;
@@ -82,13 +84,12 @@ export function normalizeArabicForTTS(text: string): string {
 }
 
 /**
- * High-quality Arabic Speech Synthesis
+ * Internal speech synthesizer helper
  */
-export function speakArabic(text: string, options?: { rate?: number; pitch?: number; onEnd?: () => void }) {
+function speakInternal(text: string, options?: { rate?: number; pitch?: number; onEnd?: () => void }) {
   if (typeof window === 'undefined' || !window.speechSynthesis) return;
 
   try {
-    stopAllSpeech();
     const phoneticText = normalizeArabicForTTS(text);
     const utterance = new SpeechSynthesisUtterance(phoneticText);
     utterance.lang = 'ar-SA';
@@ -106,20 +107,38 @@ export function speakArabic(text: string, options?: { rate?: number; pitch?: num
 
     if (options?.onEnd) {
       utterance.onend = options.onEnd;
+      utterance.onerror = options.onEnd;
     }
 
     window.speechSynthesis.speak(utterance);
   } catch (err) {
     console.warn('Speech synthesis error:', err);
+    if (options?.onEnd) options.onEnd();
   }
 }
 
 /**
- * Pronounce syllables or scrambled tiles sequentially with clear pauses
+ * High-quality Arabic Speech Synthesis
  */
-export function speakSyllablesSequential(parts: string[], onComplete?: () => void, rate = 0.8) {
+export function speakArabic(text: string, options?: { rate?: number; pitch?: number; onEnd?: () => void }) {
   stopAllSpeech();
+  speakInternal(text, options);
+}
+
+/**
+ * Pronounce syllables or scrambled tiles sequentially with clear pauses and step highlighting
+ */
+export function speakSyllablesSequential(
+  parts: string[],
+  onComplete?: () => void,
+  rate = 0.8,
+  onStep?: (index: number) => void
+) {
+  stopAllSpeech();
+  const currentSeqId = activeSequenceId;
+
   if (!parts || parts.length === 0) {
+    if (onStep) onStep(-1);
     if (onComplete) onComplete();
     return;
   }
@@ -127,20 +146,26 @@ export function speakSyllablesSequential(parts: string[], onComplete?: () => voi
   let currentIndex = 0;
 
   function speakNext() {
+    if (activeSequenceId !== currentSeqId) return;
+
     if (currentIndex >= parts.length) {
+      if (onStep) onStep(-1);
       if (onComplete) onComplete();
       return;
     }
 
+    if (onStep) onStep(currentIndex);
+
     const cleanPart = parts[currentIndex].replace(/[ـ\-]/g, '');
     playTileSnapSound();
 
-    speakArabic(cleanPart, {
+    speakInternal(cleanPart, {
       rate: rate,
       pitch: 1.05,
       onEnd: () => {
+        if (activeSequenceId !== currentSeqId) return;
         currentIndex++;
-        sequenceTimer = setTimeout(speakNext, 300);
+        sequenceTimer = setTimeout(speakNext, 380);
       },
     });
   }
