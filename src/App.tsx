@@ -7,6 +7,7 @@ import {
   ArrowLeft,
   RotateCcw,
   CheckCircle,
+  Sparkles,
 } from 'lucide-react';
 import confetti from 'canvas-confetti';
 import { LevelId, Question, PlacedTile, AIPronunciationFeedback } from './types';
@@ -25,6 +26,7 @@ import { AudioVisualizer } from './components/AudioVisualizer';
 import { AIPronunciationSheet } from './components/AIPronunciationSheet';
 import { CelebrationModal } from './components/CelebrationModal';
 import { PWAInstallButton } from './components/PWAInstallButton';
+import { SplashScreen } from './components/SplashScreen';
 
 // Vibrant toy-tile colors for scrambled blocks
 const TILE_COLOR_SCHEMES = [
@@ -78,6 +80,21 @@ export default function App() {
 
   // Celebration state
   const [showCelebration, setShowCelebration] = useState(false);
+
+  // Dynamic Full-Screen Welcome / Splash Screen State
+  const [showSplash, setShowSplash] = useState(() => {
+    if (typeof window !== 'undefined') {
+      return !sessionStorage.getItem('arabic_app_splash_seen');
+    }
+    return true;
+  });
+
+  const handleCloseSplash = useCallback(() => {
+    if (typeof window !== 'undefined') {
+      sessionStorage.setItem('arabic_app_splash_seen', 'true');
+    }
+    setShowSplash(false);
+  }, []);
 
   const currentQuestions = questionsData[level] || INITIAL_DATA[1];
   const currentQ = currentQuestions[questionIndex] || currentQuestions[0];
@@ -367,6 +384,9 @@ export default function App() {
         ✨
       </div>
 
+      {/* ── FULL-SCREEN INTERACTIVE WELCOME SPLASH SCREEN ── */}
+      <SplashScreen isOpen={showSplash} onClose={handleCloseSplash} />
+
       {/* ── PWA IN-APP INSTALL PROMPT (Auto-hidden if standalone/installed) ── */}
       <PWAInstallButton />
 
@@ -375,14 +395,18 @@ export default function App() {
         {/* Main Header Bar */}
         <div className="bg-white/95 backdrop-blur-md rounded-3xl p-3.5 sm:p-4 shadow-xl shadow-purple-500/5 flex items-center justify-between mb-3 border-2 border-purple-100">
           <div className="flex items-center gap-3">
-            <div className="w-12 h-12 sm:w-14 sm:h-14 rounded-2xl overflow-hidden shadow-md shadow-orange-500/20 border-2 border-white animate-bounce-slow shrink-0 bg-amber-100">
+            <button
+              onClick={() => setShowSplash(true)}
+              className="w-12 h-12 sm:w-14 sm:h-14 rounded-2xl overflow-hidden shadow-md shadow-orange-500/20 border-2 border-white animate-bounce-slow shrink-0 bg-amber-100 cursor-pointer hover:scale-105 active:scale-95 transition-all text-right"
+              title="فَتْحُ شَاشَةِ التَّرْحِيبِ"
+            >
               <img
                 src="/app-icon.jpg"
                 alt="أيقونة تركيب كلمات وجمل وفقرات"
                 referrerPolicy="no-referrer"
                 className="w-full h-full object-cover"
               />
-            </div>
+            </button>
             <div>
               <div className="flex items-center gap-1.5">
                 <h1 className="text-lg sm:text-2xl font-black tracking-tight text-slate-900">
@@ -395,23 +419,33 @@ export default function App() {
             </div>
           </div>
 
-          {/* Golden Stars Pill */}
-          <div className="flex items-center gap-2 bg-gradient-to-r from-amber-50 to-yellow-100 px-3.5 py-2 rounded-2xl border-2 border-amber-300 shadow-sm">
-            <div className="flex items-center gap-1">
-              {[1, 2, 3].map((s) => (
-                <Star
-                  key={s}
-                  className={`w-5 h-5 sm:w-6 sm:h-6 transition-all duration-300 ${
-                    s <= earnedStars
-                      ? 'text-amber-400 fill-amber-400 drop-shadow-sm scale-110'
-                      : 'text-slate-300 fill-slate-100'
-                  }`}
-                />
-              ))}
+          {/* Golden Stars Pill & Splash trigger */}
+          <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 bg-gradient-to-r from-amber-50 to-yellow-100 px-3.5 py-2 rounded-2xl border-2 border-amber-300 shadow-sm">
+              <div className="flex items-center gap-1">
+                {[1, 2, 3].map((s) => (
+                  <Star
+                    key={s}
+                    className={`w-5 h-5 sm:w-6 sm:h-6 transition-all duration-300 ${
+                      s <= earnedStars
+                        ? 'text-amber-400 fill-amber-400 drop-shadow-sm scale-110'
+                        : 'text-slate-300 fill-slate-100'
+                    }`}
+                  />
+                ))}
+              </div>
+              <span className="text-xs sm:text-sm font-black text-amber-900 bg-white/90 px-2 py-0.5 rounded-xl border border-amber-200">
+                {score} نُقْطَة
+              </span>
             </div>
-            <span className="text-xs sm:text-sm font-black text-amber-900 bg-white/90 px-2 py-0.5 rounded-xl border border-amber-200">
-              {score} نُقْطَة
-            </span>
+
+            <button
+              onClick={() => setShowSplash(true)}
+              className="p-2.5 rounded-2xl bg-purple-50 hover:bg-purple-100 text-purple-700 border border-purple-200 shadow-xs transition-colors shrink-0 cursor-pointer"
+              title="شَاشَةُ التَّرْحِيبِ"
+            >
+              <Sparkles className="w-4 h-4 text-purple-600 animate-pulse" />
+            </button>
           </div>
         </div>
 
