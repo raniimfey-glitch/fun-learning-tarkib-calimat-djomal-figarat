@@ -127,31 +127,32 @@ export default function App() {
   // Celebration state
   const [showCelebration, setShowCelebration] = useState(false);
 
-  // Dynamic Full-Screen Welcome / Splash Screen State
-  const [showSplash, setShowSplash] = useState(() => {
-    if (typeof window !== 'undefined') {
-      return !sessionStorage.getItem('arabic_app_splash_seen');
-    }
-    return true;
+  // Dynamic Full-Screen Startup Intro Sequence:
+  // Step 1: Icon fills screen (الأيقونة تملأ الشاشة)
+  // Step 2: Redesigned Welcome Screen (الشاشة الترحيبية المستحدثة) for 5 seconds
+  // Step 3: Direct transition to Main App Interface
+  const [introState, setIntroState] = useState<{
+    isOpen: boolean;
+    initialStage: 'icon' | 'welcome';
+  }>({
+    isOpen: true,
+    initialStage: 'icon',
   });
 
   // Open Splash Screen safely (stopping any ongoing speech audio)
   const handleOpenSplash = useCallback(() => {
     stopAllSpeech();
     setIsPlayingAudio(false);
-    setShowSplash(true);
+    setIntroState({ isOpen: true, initialStage: 'welcome' });
   }, []);
 
   const currentQuestions = questionsData[level] || INITIAL_DATA[1];
   const currentQ = currentQuestions[questionIndex] || currentQuestions[0];
   const levelConfig = LEVEL_CONFIGS[level];
 
-  // Close Splash Screen
+  // Close Splash Screen and enter main app interface
   const handleCloseSplash = useCallback(() => {
-    if (typeof window !== 'undefined') {
-      sessionStorage.setItem('arabic_app_splash_seen', 'true');
-    }
-    setShowSplash(false);
+    setIntroState((prev) => ({ ...prev, isOpen: false }));
     stopAllSpeech();
     setIsPlayingAudio(false);
   }, []);
@@ -455,8 +456,12 @@ export default function App() {
         ✨
       </div>
 
-      {/* ── FULL-SCREEN INTERACTIVE WELCOME SPLASH SCREEN ── */}
-      <SplashScreen isOpen={showSplash} onClose={handleCloseSplash} />
+      {/* ── FULL-SCREEN INTERACTIVE STARTUP & WELCOME SPLASH SCREEN ── */}
+      <SplashScreen
+        isOpen={introState.isOpen}
+        initialStage={introState.initialStage}
+        onClose={handleCloseSplash}
+      />
 
       {/* ── PWA IN-APP INSTALL PROMPT (Auto-hidden if standalone/installed) ── */}
       <PWAInstallButton />
