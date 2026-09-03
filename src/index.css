@@ -65,3 +65,11 @@
 .btn-3d:active {
   transform: translateY(3px);
 }
+
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}

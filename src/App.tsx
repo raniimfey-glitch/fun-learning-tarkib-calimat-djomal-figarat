@@ -29,6 +29,51 @@ import { CelebrationModal } from './components/CelebrationModal';
 import { PWAInstallButton } from './components/PWAInstallButton';
 import { SplashScreen } from './components/SplashScreen';
 
+/**
+ * Shuffles parts ensuring they are strictly randomized and NEVER remain in their original sorted order.
+ * Guarantees that no sentence in Level 2 (or multi-part question) ever appears pre-solved.
+ */
+function shuffleTilesStrict(parts: string[]): string[] {
+  if (!parts || parts.length <= 1) return parts ? [...parts] : [];
+
+  let result = [...parts];
+  let attempts = 0;
+
+  // Run Fisher-Yates shuffle until the sequence strictly differs from original
+  while (attempts < 50) {
+    result = [...parts];
+    for (let i = result.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      const temp = result[i];
+      result[i] = result[j];
+      result[j] = temp;
+    }
+
+    // Condition 1: Must never be identical to original sorted order
+    const isIdentical = result.every((val, idx) => val === parts[idx]);
+
+    // Condition 2: For 3 or more items, avoid having the first item stay in place
+    const startsWithSame = parts.length >= 3 ? result[0] === parts[0] : false;
+
+    if (!isIdentical && !startsWithSame) {
+      return result;
+    }
+
+    if (attempts > 15 && !isIdentical) {
+      return result;
+    }
+
+    attempts++;
+  }
+
+  // Deterministic fallback: rotate elements to guarantee scramble
+  if (result.every((val, idx) => val === parts[idx])) {
+    return [...parts.slice(1), parts[0]];
+  }
+
+  return result;
+}
+
 // Vibrant toy-tile colors for scrambled blocks
 const TILE_COLOR_SCHEMES = [
   {
@@ -119,7 +164,7 @@ export default function App() {
     setAnsweredState('idle');
     setAiFeedback(null);
     setActionFeedback(null);
-    const shuffled = [...q.parts].sort(() => Math.random() - 0.5);
+    const shuffled = shuffleTilesStrict(q.parts);
     setShuffledTiles(shuffled);
   }, []);
 
@@ -232,7 +277,10 @@ export default function App() {
     setAnsweredState('idle');
     playTileSnapSound();
     setActionFeedback('أَعِدِ التَّرْتِيبَ');
-  }, []);
+    if (currentQ) {
+      setShuffledTiles(shuffleTilesStrict(currentQ.parts));
+    }
+  }, [currentQ]);
 
   // Switch Level
   const handleSwitchLevel = useCallback((newLevel: LevelId) => {
@@ -554,7 +602,11 @@ export default function App() {
       </header>
 
       {/* ── MAIN QUESTION CARD: Tactile Board ── */}
-      <section className="w-full max-w-xl mx-auto flex-1 flex flex-col justify-center my-1 sm:my-2 relative z-10">
+      <section
+        className={`w-full ${
+          level === 2 ? 'max-w-2xl' : 'max-w-xl'
+        } mx-auto flex-1 flex flex-col justify-center my-1 sm:my-2 relative z-10`}
+      >
         <motion.div
           key={`${level}-${questionIndex}`}
           initial={{ opacity: 0, scale: 0.96 }}
@@ -651,11 +703,17 @@ export default function App() {
 
           {/* ── DROP / COMPOSITION TRAY (Magical Assembly Groove) ── */}
           <div
-            className={`min-h-[92px] sm:min-h-[105px] rounded-3xl border-2 border-dashed p-3 sm:p-4 my-3 flex items-center justify-center flex-wrap gap-2.5 sm:gap-3 transition-all ${
+            className={`min-h-[92px] sm:min-h-[105px] rounded-3xl border-2 border-dashed p-3 sm:p-4 my-3 transition-all ${
+              level === 2
+                ? 'flex items-center justify-center w-full overflow-hidden'
+                : 'flex items-center justify-center flex-wrap gap-2.5 sm:gap-3'
+            } ${
               answeredState === 'correct'
                 ? 'border-emerald-400 bg-emerald-50/90 shadow-md shadow-emerald-500/10'
                 : answeredState === 'wrong'
                 ? 'border-rose-300 bg-rose-50/90'
+                : level === 2
+                ? 'border-purple-300 bg-purple-50/40 shadow-inner'
                 : 'border-amber-300/80 bg-amber-50/40 shadow-inner'
             }`}
           >
@@ -709,6 +767,60 @@ export default function App() {
                   </AnimatePresence>
                 </div>
               )
+            ) : level === 2 ? (
+              /* ── LEVEL 2: SENTENCE ARRANGEMENT IN A SINGLE STRAIGHT LINE ── */
+              <div className="w-full flex items-center justify-center">
+                <div className="flex flex-nowrap items-center justify-center gap-2 sm:gap-3 w-full overflow-x-auto py-1 px-1 no-scrollbar">
+                  {placedTiles.length === 0 ? (
+                    currentQ.parts.map((_, i) => (
+                      <div
+                        key={i}
+                        className="flex-1 min-w-[70px] max-w-[135px] h-13 sm:h-15 rounded-2xl border-2 border-dashed border-purple-300/80 bg-white/75 flex flex-col items-center justify-center text-purple-600 font-black text-xs sm:text-sm whitespace-nowrap shrink-0 shadow-xs"
+                      >
+                        <span className="text-[10px] sm:text-xs text-purple-400 font-bold">الْكَلِمَةُ</span>
+                        <span className="text-sm sm:text-base font-black">{i + 1}</span>
+                      </div>
+                    ))
+                  ) : (
+                    <AnimatePresence>
+                      {placedTiles.map((tile, idx) => (
+                        <motion.div
+                          key={tile.id}
+                          initial={{ scale: 0.7, y: -8, opacity: 0 }}
+                          animate={{ scale: 1, y: 0, opacity: 1 }}
+                          exit={{ scale: 0.7, opacity: 0 }}
+                          transition={{ type: 'spring', stiffness: 450, damping: 25 }}
+                          onClick={() => handleReturnTile(idx)}
+                          className="px-3.5 py-2 sm:px-4 sm:py-2.5 md:px-5 md:py-3 rounded-2xl bg-white border-2 border-purple-400 border-b-4 border-b-purple-600 text-slate-900 font-black text-xl sm:text-2xl md:text-3xl shadow-md cursor-pointer hover:scale-105 active:scale-95 transition-transform whitespace-nowrap shrink-0 flex items-center gap-1.5 sm:gap-2 relative group select-none"
+                          title="اِضْغَطْ لِإِعَادَةِ هَذِهِ الكَلِمَةِ"
+                        >
+                          <span className="w-5 h-5 sm:w-6 sm:h-6 rounded-full bg-purple-100 text-purple-700 text-[11px] sm:text-xs font-black flex items-center justify-center shrink-0">
+                            {idx + 1}
+                          </span>
+                          <span>{tile.text}</span>
+                          {answeredState !== 'correct' && (
+                            <span className="w-4 h-4 sm:w-5 sm:h-5 bg-rose-500 text-white rounded-full text-[10px] sm:text-xs flex items-center justify-center opacity-70 group-hover:opacity-100 shadow-xs shrink-0">
+                              ×
+                            </span>
+                          )}
+                        </motion.div>
+                      ))}
+                      {/* Remaining placeholder slots on the same straight line */}
+                      {Array.from({ length: currentQ.parts.length - placedTiles.length }).map((_, emptyIdx) => {
+                        const slotNumber = placedTiles.length + emptyIdx + 1;
+                        return (
+                          <div
+                            key={`empty-slot-${slotNumber}`}
+                            className="flex-1 min-w-[65px] max-w-[125px] h-12 sm:h-14 rounded-2xl border-2 border-dashed border-purple-300/60 bg-purple-50/40 flex items-center justify-center text-purple-400 font-bold text-xs sm:text-sm whitespace-nowrap shrink-0"
+                          >
+                            <span>... {slotNumber}</span>
+                          </div>
+                        );
+                      })}
+                    </AnimatePresence>
+                  )}
+                </div>
+              </div>
             ) : placedTiles.length === 0 ? (
               <div className="flex items-center justify-center gap-3 w-full py-2">
                 {currentQ.parts.map((_, i) => (
@@ -749,6 +861,8 @@ export default function App() {
           <div className="text-xs sm:text-sm font-extrabold text-slate-500 mb-2">
             {level === 3
               ? '👆 اِضْغَطْ عَلَى الجُمَلِ بِالتَّرْتِيبِ الزَّمَنِيِّ لِتَكْوِينِ القِصَّةِ:'
+              : level === 2
+              ? '👆 رَتِّبِ الكَلِمَاتِ فِي سَطْرٍ وَاحِدٍ لِتَكْوِينِ الجُمْلَةِ:'
               : '👆 اِضْغَطْ عَلَى البِطَاقَاتِ بِالتَّرْتِيبِ لِوَضْعِهَا فِي المَكَانِ الصَّحِيحِ:'}
           </div>
 
@@ -775,6 +889,31 @@ export default function App() {
                   </button>
                 );
               })}
+            </div>
+          ) : level === 2 ? (
+            /* ── LEVEL 2: CANDIDATE WORDS IN A SINGLE STRAIGHT LINE ── */
+            <div className="w-full flex items-center justify-center mb-3 min-h-[64px]">
+              <div className="flex flex-nowrap items-center justify-center gap-2 sm:gap-3 w-full overflow-x-auto py-1 px-1 no-scrollbar">
+                {shuffledTiles.map((part, originalIdx) => {
+                  const isUsed = placedTiles.some((t) => t.originalIndex === originalIdx);
+                  const colorTheme = TILE_COLOR_SCHEMES[originalIdx % TILE_COLOR_SCHEMES.length];
+
+                  return (
+                    <button
+                      key={`${part}-${originalIdx}`}
+                      disabled={isUsed || answeredState === 'correct'}
+                      onClick={() => handlePlaceTile(part, originalIdx)}
+                      className={`px-3.5 py-2 sm:px-5 sm:py-2.5 md:px-6 md:py-3 rounded-2xl font-black text-xl sm:text-2xl md:text-3xl shadow-md border-2 border-b-4 transition-all whitespace-nowrap shrink-0 leading-normal ${
+                        isUsed
+                          ? 'opacity-0 pointer-events-none scale-50'
+                          : `${colorTheme.bg} ${colorTheme.border} ${colorTheme.text} ${colorTheme.shadow} hover:scale-105 active:translate-y-1 active:border-b-0 cursor-pointer`
+                      }`}
+                    >
+                      {part}
+                    </button>
+                  );
+                })}
+              </div>
             </div>
           ) : (
             <div className="flex flex-wrap items-center justify-center gap-2.5 sm:gap-3.5 mb-3 min-h-[72px]">

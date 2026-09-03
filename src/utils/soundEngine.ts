@@ -38,6 +38,50 @@ export function stopAllSpeech() {
 }
 
 /**
+ * Normalizes Arabic text for Text-to-Speech (TTS):
+ * Fixes the issue where browser speech synthesis engines (Google TTS, Chrome, Android, etc.)
+ * pronounce Arabic tanween (ـً, ـٌ, ـٍ) mistakenly as "نُونَيْن" (noonayn / two noons) or spell it out.
+ * 
+ * Phonetically in Arabic:
+ * - Tanween is a single nun saakinah (نون ساكنة واحدة):
+ *   - Tanween Damm (ـٌ) -> ضمة + نون ساكنة (ـُنْ)
+ *   - Tanween Fath (ـً / ـاً / ـًا) -> فتحة + نون ساكنة (ـَنْ)
+ *   - Tanween Kasr (ـٍ) -> كسرة + نون ساكنة (ـِنْ)
+ *   - Taa Marbuta with tanween (ةٌ, ةً, ةٍ) -> (تُنْ, تَنْ, تِنْ)
+ * 
+ * This ensures the SpeechSynthesis engine articulates a single natural, crisp noon (ـُنْ / ـَنْ / ـِنْ)
+ * without ever pronouncing "نونين" or doubling.
+ */
+export function normalizeArabicForTTS(text: string): string {
+  if (!text) return '';
+  let s = text;
+
+  // 1. Remove kashida (tatweel) and hyphens
+  s = s.replace(/[ـ\-]/g, '');
+
+  // 2. Handle Taa Marbuta with Tanween before general tanween
+  s = s.replace(/ة\u064C/g, 'تُنْ');
+  s = s.replace(/ة\u064B/g, 'تَنْ');
+  s = s.replace(/ة\u064D/g, 'تِنْ');
+
+  // 3. Handle Tanween Fath (ـاً, ـًا, or solitary ـً like مَاءً)
+  s = s.replace(/([^\s])\u064Bا/g, '$1َنْ');
+  s = s.replace(/([^\s])ا\u064B/g, '$1َنْ');
+  s = s.replace(/\u064B/g, 'َنْ');
+
+  // 4. Handle Tanween Damm (ـٌ) -> ُنْ (single damma + single noon with sukoon)
+  s = s.replace(/\u064C/g, 'ُنْ');
+
+  // 5. Handle Tanween Kasr (ـٍ) -> ِنْ (single kasra + single noon with sukoon)
+  s = s.replace(/\u064D/g, 'ِنْ');
+
+  // 6. Deduplicate any consecutive noons with sukoon
+  s = s.replace(/نْ+/g, 'نْ');
+
+  return s;
+}
+
+/**
  * High-quality Arabic Speech Synthesis
  */
 export function speakArabic(text: string, options?: { rate?: number; pitch?: number; onEnd?: () => void }) {
@@ -45,7 +89,8 @@ export function speakArabic(text: string, options?: { rate?: number; pitch?: num
 
   try {
     stopAllSpeech();
-    const utterance = new SpeechSynthesisUtterance(text);
+    const phoneticText = normalizeArabicForTTS(text);
+    const utterance = new SpeechSynthesisUtterance(phoneticText);
     utterance.lang = 'ar-SA';
     utterance.rate = options?.rate ?? 0.82; // Slightly slowed down for optimal phonetic clarity
     utterance.pitch = options?.pitch ?? 1.05; // Bright, friendly pitch
