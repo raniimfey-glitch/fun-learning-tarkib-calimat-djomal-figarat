@@ -72,9 +72,6 @@ export const SplashScreen: React.FC<SplashScreenProps> = ({ isOpen, onClose }) =
             className="absolute -bottom-20 left-1/4 w-80 h-80 rounded-full bg-gradient-to-t from-amber-400/25 via-orange-500/20 to-transparent blur-3xl"
           />
 
-          {/* Strong glowing radial light centered behind the main icon */}
-          <div className="absolute top-[28%] left-1/2 -translate-x-1/2 -translate-y-1/2 w-80 sm:w-96 h-80 sm:h-96 rounded-full bg-gradient-to-r from-pink-500/40 via-purple-500/35 to-cyan-400/30 blur-2xl pointer-events-none" />
-
           {/* Subtle light particles & floating sparks (bokeh) */}
           {[...Array(12)].map((_, i) => (
             <motion.div
@@ -118,7 +115,7 @@ export const SplashScreen: React.FC<SplashScreenProps> = ({ isOpen, onClose }) =
           </button>
         </div>
 
-        {/* ── 2. UPPER-MIDDLE AREA: 3D APP ICON WITH NEON GLOW ── */}
+        {/* ── 2. UPPER-MIDDLE AREA: 3D APP ICON WITH HARMONIZED NEON GLOW ── */}
         <div className="flex flex-col items-center justify-center z-10 my-auto w-full max-w-sm">
           <motion.div
             initial={{ scale: 0.7, y: 30, opacity: 0 }}
@@ -126,22 +123,24 @@ export const SplashScreen: React.FC<SplashScreenProps> = ({ isOpen, onClose }) =
             transition={{ type: 'spring', stiffness: 260, damping: 20, delay: 0.1 }}
             className="relative mb-6"
           >
-            {/* Multi-layered pulsating neon glow rings */}
+            {/* Deep Centered Ambient Radial Halo - Harmonious single-phase breathing */}
             <motion.div
               animate={{
-                scale: [1, 1.18, 1],
-                opacity: [0.5, 0.85, 0.5],
+                scale: [1, 1.1, 1],
+                opacity: [0.4, 0.65, 0.4],
               }}
-              transition={{ duration: 3, repeat: Infinity, ease: 'easeInOut' }}
-              className="absolute -inset-4 rounded-[32px] bg-gradient-to-tr from-rose-500 via-purple-500 to-cyan-400 blur-xl opacity-70"
+              transition={{ duration: 3.5, repeat: Infinity, ease: 'easeInOut' }}
+              className="absolute -inset-10 rounded-full bg-gradient-to-tr from-purple-600/40 via-pink-500/35 to-cyan-400/30 blur-2xl pointer-events-none"
             />
+
+            {/* Harmonious Single Neon Glow Halo - Perfectly in sync without clash */}
             <motion.div
               animate={{
-                scale: [1.1, 0.95, 1.1],
-                opacity: [0.3, 0.6, 0.3],
+                scale: [1, 1.06, 1],
+                opacity: [0.5, 0.75, 0.5],
               }}
-              transition={{ duration: 4, repeat: Infinity, ease: 'easeInOut' }}
-              className="absolute -inset-2 rounded-[28px] bg-gradient-to-br from-amber-400 via-pink-500 to-indigo-500 blur-md opacity-60"
+              transition={{ duration: 3.5, repeat: Infinity, ease: 'easeInOut' }}
+              className="absolute -inset-3 rounded-[30px] bg-gradient-to-tr from-rose-500 via-purple-500 to-cyan-400 blur-xl opacity-60 pointer-events-none"
             />
 
             {/* High-Resolution Rounded-Square App Icon (border-radius: 20px) */}
@@ -199,11 +198,11 @@ export const SplashScreen: React.FC<SplashScreenProps> = ({ isOpen, onClose }) =
             transition={{ delay: 0.4, duration: 0.5 }}
             className="px-5 py-2 rounded-full bg-white/[0.08] backdrop-blur-xl border border-white/20 shadow-[0_0_20px_rgba(168,85,247,0.25)] flex items-center gap-2 text-white"
           >
-            <Sparkles className="w-3.5 h-3.5 text-amber-300 animate-pulse" />
+            <Sparkles className="w-3.5 h-3.5 text-amber-300 drop-shadow-[0_0_6px_rgba(252,211,77,0.7)]" />
             <span className="text-xs sm:text-sm font-bold text-purple-100 tracking-wide">
               رنيم فاي | التّعلّم الممتِع
             </span>
-            <Sparkles className="w-3.5 h-3.5 text-amber-300 animate-pulse" />
+            <Sparkles className="w-3.5 h-3.5 text-amber-300 drop-shadow-[0_0_6px_rgba(252,211,77,0.7)]" />
           </motion.div>
 
           {/* Three rounded navigation/loading dots with smooth glow effect */}
