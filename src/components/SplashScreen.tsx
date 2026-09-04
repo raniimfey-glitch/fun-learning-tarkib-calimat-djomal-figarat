@@ -63,70 +63,61 @@ export const SplashScreen: React.FC<SplashScreenProps> = ({
           className="fixed inset-0 z-50 overflow-hidden select-none bg-[#011412] font-sans"
         >
           {/* ════════════════════════════════════════════════════════════════
-              STAGE 1: FULL SCREEN ICON COVER (الشاشة الأولى: الأيقونة تملأ الشاشة)
+              STAGE 1: COMPACT APP ICON (الشاشة الأولى: الاحتفاظ بالأيقونة الأصغر حجماً فقط وحذف الكبيرة)
              ════════════════════════════════════════════════════════════════ */}
           {stage === 'icon' ? (
             <motion.div
               key="stage-icon"
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
-              exit={{ opacity: 0, scale: 1.05 }}
-              transition={{ duration: 0.6, ease: 'easeInOut' }}
+              exit={{ opacity: 0, scale: 0.98 }}
+              transition={{ duration: 0.5, ease: 'easeInOut' }}
               onClick={() => setStage('welcome')}
-              className="relative w-full h-full flex items-center justify-center cursor-pointer bg-[#011412] overflow-hidden"
+              className="relative w-full h-full flex flex-col items-center justify-center cursor-pointer bg-[#011412] overflow-hidden"
               title="اِضْغَطْ لِلانْتِقَالِ لِلشَّاشَةِ التَّرْحِيبِيَّةِ"
             >
-              {/* Blurred Ambient Backdrop covering the entire screen seamlessly */}
-              <img
-                src="/app-icon.jpg"
-                alt="خلفية الأيقونة"
-                className="absolute inset-0 w-full h-full object-cover blur-3xl scale-125 opacity-40 pointer-events-none"
-              />
+              {/* Ambient backdrop glow */}
+              <div className="absolute inset-0 pointer-events-none overflow-hidden">
+                <div className="absolute inset-0 bg-gradient-to-b from-[#003d37]/40 via-[#011412] to-[#011412]" />
+                <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-80 h-80 rounded-full bg-[#00C9B7]/15 blur-3xl" />
+              </div>
 
-              {/* Dynamic light gradient overlay */}
-              <div className="absolute inset-0 bg-gradient-to-t from-[#011412]/80 via-transparent to-[#011412]/60 pointer-events-none" />
-
-              {/* Full Screen App Icon (Edge-to-Edge Responsive Cover) */}
+              {/* Smaller App Icon (الصورة الأولى الأصغر حجماً فقط) */}
               <motion.div
-                initial={{ scale: 0.94, opacity: 0.8 }}
-                animate={{
-                  scale: [0.96, 1.02, 1],
-                  opacity: 1,
-                }}
-                transition={{
-                  duration: 2,
-                  ease: 'easeOut',
-                }}
-                className="relative z-10 w-full h-full flex items-center justify-center p-0 sm:p-4"
+                initial={{ scale: 0.9, opacity: 0.8 }}
+                animate={{ scale: 1, opacity: 1 }}
+                transition={{ duration: 0.5, ease: 'easeOut' }}
+                className="relative z-10 flex flex-col items-center"
               >
-                <img
-                  src="/app-icon.jpg"
-                  alt="أيقونة تركيب كلمات وجمل وفقرات"
-                  className="w-full h-full object-cover sm:object-contain sm:max-w-xl sm:max-h-[88vh] sm:rounded-3xl shadow-2xl"
-                />
+                <div className="relative w-28 h-28 sm:w-32 sm:h-32 rounded-[22px] p-[2px] bg-gradient-to-b from-white/70 via-[#00C9B7]/50 to-white/20 shadow-[0_16px_40px_rgba(0,201,183,0.35)] backdrop-blur-xl">
+                  <div className="w-full h-full rounded-[20px] overflow-hidden bg-slate-900 border border-white/25 relative">
+                    <img
+                      src="/app-icon.jpg"
+                      alt="أيقونة تركيب كلمات وجمل وفقرات"
+                      className="w-full h-full object-cover"
+                    />
+                    {/* Sweeping Light Sheen */}
+                    <motion.div
+                      animate={{
+                        x: ['-150%', '220%'],
+                      }}
+                      transition={{
+                        duration: 1.8,
+                        repeat: Infinity,
+                        repeatDelay: 1,
+                        ease: 'easeInOut',
+                      }}
+                      className="absolute inset-0 w-1/2 h-full bg-gradient-to-r from-transparent via-white/30 to-transparent -skew-x-12 pointer-events-none"
+                    />
+                  </div>
+                </div>
 
-                {/* Sweeping Light Sheen across the full screen icon */}
-                <motion.div
-                  animate={{
-                    x: ['-150%', '220%'],
-                  }}
-                  transition={{
-                    duration: 1.8,
-                    repeat: Infinity,
-                    repeatDelay: 1,
-                    ease: 'easeInOut',
-                  }}
-                  className="absolute inset-0 w-1/3 h-full bg-gradient-to-r from-transparent via-white/25 to-transparent -skew-x-12 pointer-events-none"
-                />
-              </motion.div>
-
-              {/* Bottom Subtle Transition Cue */}
-              <div className="absolute bottom-6 z-20 flex flex-col items-center gap-2">
-                <div className="px-4 py-1.5 rounded-full bg-black/40 backdrop-blur-md border border-white/20 text-white/90 text-xs font-bold flex items-center gap-2">
+                {/* Bottom Cue */}
+                <div className="mt-8 px-4 py-1.5 rounded-full bg-black/40 backdrop-blur-md border border-white/15 text-teal-200/90 text-xs font-bold flex items-center gap-2">
                   <span className="w-2 h-2 rounded-full bg-[#00C9B7] animate-ping" />
                   <span>جَارٍ الفَتْحُ...</span>
                 </div>
-              </div>
+              </motion.div>
             </motion.div>
           ) : (
             /* ════════════════════════════════════════════════════════════════
@@ -330,8 +321,8 @@ export const SplashScreen: React.FC<SplashScreenProps> = ({
                 </motion.div>
               </div>
 
-              {/* ── 5. BOTTOM FOOTER AREA (تذييل الشاشة الترحيبية) ── */}
-              <div className="w-full flex flex-col items-center gap-3 z-10 max-w-lg mt-auto pb-2 px-2">
+              {/* ── 5. BOTTOM AREA (المنطقة السفلية للشاشة الترحيبية بعد حذف التذييل) ── */}
+              <div className="w-full flex flex-col items-center gap-3 z-10 max-w-sm mt-auto pb-4 px-2">
                 {/* 3 Animated Indicator Dots */}
                 <div className="flex items-center justify-center gap-2.5 pt-1">
                   {[0, 1, 2].map((idx) => {
@@ -352,13 +343,6 @@ export const SplashScreen: React.FC<SplashScreenProps> = ({
                       />
                     );
                   })}
-                </div>
-
-                {/* Footer Notice & Copyright */}
-                <div className="w-full px-4 py-2.5 rounded-2xl bg-black/35 backdrop-blur-md border border-white/10 shadow-lg text-center">
-                  <p className="text-xs sm:text-sm font-bold text-teal-100/90 leading-relaxed tracking-wide drop-shadow-sm">
-                    التعلم الممتع - تركيب كلمات وجمل وفقرات - سميرة عبد الصدوق جميع الحقوق محفوظة
-                  </p>
                 </div>
               </div>
             </motion.div>
