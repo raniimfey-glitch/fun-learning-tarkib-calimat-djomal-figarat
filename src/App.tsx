@@ -128,6 +128,35 @@ export default function App() {
   // Celebration state
   const [showCelebration, setShowCelebration] = useState(false);
 
+  // Unlocked levels progression: Level 1 unlocked by default. Level 2 unlocks only after completing Level 1. Level 3 unlocks only after completing Level 2.
+  const [unlockedLevels, setUnlockedLevels] = useState<number[]>(() => {
+    try {
+      const saved = localStorage.getItem('arabic_app_unlocked_levels');
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed) && parsed.includes(1)) {
+          return parsed;
+        }
+      }
+    } catch (e) {
+      // ignore
+    }
+    return [1];
+  });
+
+  const unlockLevel = useCallback((levelToUnlock: number) => {
+    setUnlockedLevels((prev) => {
+      if (prev.includes(levelToUnlock)) return prev;
+      const updated = [...prev, levelToUnlock];
+      try {
+        localStorage.setItem('arabic_app_unlocked_levels', JSON.stringify(updated));
+      } catch (e) {
+        // ignore
+      }
+      return updated;
+    });
+  }, []);
+
   // Dynamic Full-Screen Startup Intro Sequence:
   // Step 1: Icon fills screen (الأيقونة تملأ الشاشة)
   // Step 2: Redesigned Welcome Screen (الشاشة الترحيبية المستحدثة) for 5 seconds
@@ -279,9 +308,15 @@ export default function App() {
       setQuestionIndex((prev) => prev + 1);
       setActionFeedback('السُّؤَالُ التَّالِي');
     } else {
+      // Completed the level! Unlock next level
       setShowCelebration(true);
+      if (level === 1) {
+        unlockLevel(2);
+      } else if (level === 2) {
+        unlockLevel(3);
+      }
     }
-  }, [questionIndex, currentQuestions.length]);
+  }, [questionIndex, currentQuestions.length, level, unlockLevel]);
 
   // Previous Question
   const handlePrevious = useCallback(() => {
@@ -308,16 +343,29 @@ export default function App() {
     }
   }, [currentQ]);
 
-  // Switch Level
-  const handleSwitchLevel = useCallback((newLevel: LevelId) => {
-    stopAllSpeech();
-    setIsPlayingAudio(false);
-    setActiveReadingIndex(null);
-    setLevel(newLevel);
-    setQuestionIndex(0);
-    setScore(0);
-    setShowCelebration(false);
-  }, []);
+  // Switch Level with strict lock check
+  const handleSwitchLevel = useCallback(
+    (newLevel: LevelId) => {
+      if (!unlockedLevels.includes(newLevel)) {
+        playRetrySound();
+        if (newLevel === 2) {
+          setActionFeedback('🔒 أَكْمِلِ المُسْتَوَى الأَوَّلَ أَوَّلاً لِفَتْحِ المُسْتَوَى الثَّانِي');
+        } else if (newLevel === 3) {
+          setActionFeedback('🔒 أَكْمِلِ المُسْتَوَى الثَّانِيَ أَوَّلاً لِفَتْحِ المُسْتَوَى الثَّالِثِ');
+        }
+        setTimeout(() => setActionFeedback(null), 3000);
+        return;
+      }
+      stopAllSpeech();
+      setIsPlayingAudio(false);
+      setActiveReadingIndex(null);
+      setLevel(newLevel);
+      setQuestionIndex(0);
+      setScore(0);
+      setShowCelebration(false);
+    },
+    [unlockedLevels]
+  );
 
   // Tile Placement
   const handlePlaceTile = useCallback(
@@ -333,12 +381,45 @@ export default function App() {
 
       playTileSnapSound();
       speakArabic(tileText.replace(/[ـ\-]/g, ''));
-      setPlacedTiles((prev) => [
-        ...prev,
+      const nextPlaced = [
+        ...placedTiles,
         { id: `tile-${Date.now()}-${originalIndex}`, text: tileText, originalIndex },
-      ]);
+      ];
+      setPlacedTiles(nextPlaced);
+
+      // In Level 1: When placing the last syllable, the syllables connect into the word!
+      // If the syllables form the correct word, celebrate immediately:
+      if (level === 1 && currentQ && nextPlaced.length === currentQ.parts.length) {
+        const userText = nextPlaced.map((t) => t.text).join('|');
+        const correctText = currentQ.parts.join('|');
+        const isMatch =
+          userText === correctText ||
+          normalizeArabicText(nextPlaced.map((t) => t.text).join('')) ===
+            normalizeArabicText(currentQ.parts.join(''));
+        if (isMatch) {
+          setTimeout(() => {
+            setAnsweredState('correct');
+            setScore((prev) => prev + 1);
+            playSuccessChime();
+            try {
+              confetti({
+                particleCount: 55,
+                spread: 70,
+                origin: { y: 0.65 },
+                colors: ['#FF6B6B', '#4ECDC4', '#FFE66D', '#A06CD5', '#FF9F1C'],
+              });
+            } catch (e) {
+              // ignore
+            }
+            setActionFeedback('✨ أَحْسَنْتَ! كَلِمَةٌ صَحِيحَةٌ وَمُتَّصِلَةٌ');
+            setTimeout(() => {
+              speakArabic(`أَحْسَنْتَ! ${currentQ.word}`);
+            }, 300);
+          }, 350);
+        }
+      }
     },
-    [answeredState, placedTiles]
+    [answeredState, placedTiles, level, currentQ]
   );
 
   // Return Placed Tile back to pool
@@ -579,7 +660,7 @@ export default function App() {
         <div className="grid grid-cols-3 gap-2 sm:gap-2.5">
           <button
             onClick={() => handleSwitchLevel(1)}
-            className={`py-2.5 sm:py-3 px-2 rounded-2xl font-black text-sm sm:text-base transition-all shadow-md flex flex-col items-center justify-center border-b-4 active:translate-y-1 active:border-b-0 ${
+            className={`py-2.5 sm:py-3 px-2 rounded-2xl font-black text-xs sm:text-sm md:text-base transition-all shadow-md flex flex-col items-center justify-center border-b-4 active:translate-y-1 active:border-b-0 ${
               level === 1
                 ? 'bg-gradient-to-br from-amber-400 via-orange-500 to-rose-500 text-white border-rose-700 shadow-orange-500/25'
                 : 'bg-white text-slate-700 border-slate-200 hover:bg-slate-50'
@@ -587,7 +668,7 @@ export default function App() {
           >
             <div className="flex items-center gap-1.5">
               <span className="text-base sm:text-lg">🧩</span>
-              <span>المُسْتَوَى ١</span>
+              <span>المستوى الأول</span>
             </div>
             <span
               className={`text-[11px] sm:text-xs font-extrabold mt-0.5 whitespace-nowrap ${
@@ -600,43 +681,59 @@ export default function App() {
 
           <button
             onClick={() => handleSwitchLevel(2)}
-            className={`py-2.5 sm:py-3 px-2 rounded-2xl font-black text-sm sm:text-base transition-all shadow-md flex flex-col items-center justify-center border-b-4 active:translate-y-1 active:border-b-0 ${
-              level === 2
+            className={`py-2.5 sm:py-3 px-2 rounded-2xl font-black text-xs sm:text-sm md:text-base transition-all shadow-md flex flex-col items-center justify-center border-b-4 active:translate-y-1 active:border-b-0 relative ${
+              !unlockedLevels.includes(2)
+                ? 'bg-slate-100 text-slate-400 border-slate-300 hover:bg-slate-200/80 shadow-none'
+                : level === 2
                 ? 'bg-gradient-to-br from-purple-500 via-indigo-600 to-sky-600 text-white border-indigo-800 shadow-indigo-500/25'
                 : 'bg-white text-slate-700 border-slate-200 hover:bg-slate-50'
             }`}
           >
             <div className="flex items-center gap-1.5">
-              <span className="text-base sm:text-lg">📚</span>
-              <span>المُسْتَوَى ٢</span>
+              <span className="text-base sm:text-lg">
+                {!unlockedLevels.includes(2) ? '🔒' : '📚'}
+              </span>
+              <span>المستوى الثاني</span>
             </div>
             <span
               className={`text-[11px] sm:text-xs font-extrabold mt-0.5 whitespace-nowrap ${
-                level === 2 ? 'text-sky-100' : 'text-slate-500'
+                !unlockedLevels.includes(2)
+                  ? 'text-amber-700/80 font-black'
+                  : level === 2
+                  ? 'text-sky-100'
+                  : 'text-slate-500'
               }`}
             >
-              كَلِمَاتٌ ← جُمْلَةٌ
+              {!unlockedLevels.includes(2) ? 'مُغْلَقٌ 🔒' : 'كَلِمَاتٌ ← جُمْلَةٌ'}
             </span>
           </button>
 
           <button
             onClick={() => handleSwitchLevel(3)}
-            className={`py-2.5 sm:py-3 px-2 rounded-2xl font-black text-sm sm:text-base transition-all shadow-md flex flex-col items-center justify-center border-b-4 active:translate-y-1 active:border-b-0 ${
-              level === 3
+            className={`py-2.5 sm:py-3 px-2 rounded-2xl font-black text-xs sm:text-sm md:text-base transition-all shadow-md flex flex-col items-center justify-center border-b-4 active:translate-y-1 active:border-b-0 relative ${
+              !unlockedLevels.includes(3)
+                ? 'bg-slate-100 text-slate-400 border-slate-300 hover:bg-slate-200/80 shadow-none'
+                : level === 3
                 ? 'bg-gradient-to-br from-emerald-500 via-teal-600 to-cyan-600 text-white border-teal-800 shadow-teal-500/25'
                 : 'bg-white text-slate-700 border-slate-200 hover:bg-slate-50'
             }`}
           >
             <div className="flex items-center gap-1.5">
-              <span className="text-base sm:text-lg">📖</span>
-              <span>المُسْتَوَى ٣</span>
+              <span className="text-base sm:text-lg">
+                {!unlockedLevels.includes(3) ? '🔒' : '📖'}
+              </span>
+              <span>المستوى الثالث</span>
             </div>
             <span
               className={`text-[11px] sm:text-xs font-extrabold mt-0.5 whitespace-nowrap ${
-                level === 3 ? 'text-teal-100' : 'text-slate-500'
+                !unlockedLevels.includes(3)
+                  ? 'text-amber-700/80 font-black'
+                  : level === 3
+                  ? 'text-teal-100'
+                  : 'text-slate-500'
               }`}
             >
-              جُمَلٌ ← قِصَّةٌ
+              {!unlockedLevels.includes(3) ? 'مُغْلَقٌ 🔒' : 'جُمَلٌ ← قِصَّةٌ'}
             </span>
           </button>
         </div>
@@ -713,10 +810,10 @@ export default function App() {
 
           {/* ── DROP / COMPOSITION TRAY (Magical Assembly Groove) ── */}
           <div
-            className={`min-h-[92px] sm:min-h-[105px] rounded-3xl border-2 border-dashed p-3 sm:p-4 my-3 transition-all ${
+            className={`min-h-[96px] sm:min-h-[110px] rounded-3xl border-2 border-dashed p-3 sm:p-5 my-3 transition-all flex items-center justify-center ${
               level === 2
-                ? 'flex items-center justify-center w-full overflow-hidden'
-                : 'flex items-center justify-center flex-wrap gap-2.5 sm:gap-3'
+                ? 'w-full'
+                : 'flex-wrap gap-2.5 sm:gap-3'
             } ${
               answeredState === 'correct'
                 ? 'border-emerald-400 bg-emerald-50/90 shadow-md shadow-emerald-500/10'
@@ -778,103 +875,172 @@ export default function App() {
                 </div>
               )
             ) : level === 2 ? (
-              /* ── LEVEL 2: SENTENCE ARRANGEMENT IN A SINGLE STRAIGHT LINE ── */
-              <div className="w-full flex items-center justify-center">
-                <div className="flex flex-nowrap items-center justify-center gap-2 sm:gap-3 w-full overflow-x-auto py-1 px-1 no-scrollbar">
-                  {placedTiles.length === 0 ? (
-                    currentQ.parts.map((_, i) => (
-                      <div
-                        key={i}
-                        className="flex-1 min-w-[70px] max-w-[135px] h-13 sm:h-15 rounded-2xl border-2 border-dashed border-purple-300/80 bg-white/75 flex flex-col items-center justify-center text-purple-600 font-black text-xs sm:text-sm whitespace-nowrap shrink-0 shadow-xs"
-                      >
-                        <span className="text-[10px] sm:text-xs text-purple-400 font-bold">الْكَلِمَةُ</span>
-                        <span className="text-sm sm:text-base font-black">{i + 1}</span>
-                      </div>
-                    ))
-                  ) : (
+              /* ── LEVEL 2: WORDS APPEAR WITHOUT CARDS, IN FULL CLARITY AND COMPLETENESS ── */
+              <div className="w-full flex flex-col items-center justify-center py-2 px-1">
+                {placedTiles.length === 0 ? (
+                  <div className="flex flex-col sm:flex-row items-center justify-center gap-2 text-purple-500 font-black text-sm sm:text-base text-center py-4 select-none">
+                    <span className="text-2xl">✍️</span>
+                    <span>اِضْغَطْ عَلَى الكَلِمَاتِ فِي الأَسْفَلِ لِتَرْكِيبِ الجُمْلَةِ هُنَا</span>
+                  </div>
+                ) : (
+                  <div className="w-full flex flex-wrap items-center justify-center gap-x-3.5 sm:gap-x-5 gap-y-2 py-2 px-2 text-center dir-rtl">
                     <AnimatePresence>
                       {placedTiles.map((tile, idx) => (
-                        <motion.div
+                        <motion.button
                           key={tile.id}
-                          initial={{ scale: 0.7, y: -8, opacity: 0 }}
+                          type="button"
+                          initial={{ scale: 0.8, y: -6, opacity: 0 }}
                           animate={{ scale: 1, y: 0, opacity: 1 }}
-                          exit={{ scale: 0.7, opacity: 0 }}
+                          exit={{ scale: 0.8, opacity: 0 }}
                           transition={{ type: 'spring', stiffness: 450, damping: 25 }}
                           onClick={() => handleReturnTile(idx)}
-                          className="px-3.5 py-2 sm:px-4 sm:py-2.5 md:px-5 md:py-3 rounded-2xl bg-white border-2 border-purple-400 border-b-4 border-b-purple-600 text-slate-900 font-black text-xl sm:text-2xl md:text-3xl shadow-md cursor-pointer hover:scale-105 active:scale-95 transition-transform whitespace-nowrap shrink-0 flex items-center gap-1.5 sm:gap-2 relative group select-none"
-                          title="اِضْغَطْ لِإِعَادَةِ هَذِهِ الكَلِمَةِ"
+                          className={`group relative inline-flex items-center font-black text-2xl sm:text-3xl md:text-4xl leading-relaxed select-none transition-colors cursor-pointer bg-transparent border-0 p-0 m-0 ${
+                            answeredState === 'correct'
+                              ? 'text-emerald-700'
+                              : answeredState === 'wrong'
+                              ? 'text-rose-700'
+                              : 'text-slate-900 hover:text-purple-700'
+                          }`}
+                          title={
+                            answeredState === 'correct'
+                              ? 'جُمْلَةٌ صَحِيحَةٌ'
+                              : 'اِضْغَطْ لِإِعَادَةِ هَذِهِ الكَلِمَةِ'
+                          }
                         >
-                          <span className="w-5 h-5 sm:w-6 sm:h-6 rounded-full bg-purple-100 text-purple-700 text-[11px] sm:text-xs font-black flex items-center justify-center shrink-0">
-                            {idx + 1}
-                          </span>
-                          <span>{tile.text}</span>
+                          <span className="tracking-normal drop-shadow-xs">{tile.text}</span>
                           {answeredState !== 'correct' && (
-                            <span className="w-4 h-4 sm:w-5 sm:h-5 bg-rose-500 text-white rounded-full text-[10px] sm:text-xs flex items-center justify-center opacity-70 group-hover:opacity-100 shadow-xs shrink-0">
-                              ×
+                            <span className="opacity-0 group-hover:opacity-100 text-rose-500 text-xs font-bold mr-1 transition-opacity">
+                              ✕
                             </span>
                           )}
-                        </motion.div>
+                        </motion.button>
                       ))}
-                      {/* Remaining placeholder slots on the same straight line */}
-                      {Array.from({ length: currentQ.parts.length - placedTiles.length }).map((_, emptyIdx) => {
-                        const slotNumber = placedTiles.length + emptyIdx + 1;
-                        return (
-                          <div
-                            key={`empty-slot-${slotNumber}`}
-                            className="flex-1 min-w-[65px] max-w-[125px] h-12 sm:h-14 rounded-2xl border-2 border-dashed border-purple-300/60 bg-purple-50/40 flex items-center justify-center text-purple-400 font-bold text-xs sm:text-sm whitespace-nowrap shrink-0"
-                          >
-                            <span>... {slotNumber}</span>
-                          </div>
-                        );
-                      })}
                     </AnimatePresence>
-                  )}
-                </div>
+                  </div>
+                )}
               </div>
             ) : placedTiles.length === 0 ? (
-              <div className="flex items-center justify-center gap-3 w-full py-2">
+              /* Level 1: Empty slots waiting for syllables */
+              <div className="flex items-center justify-center gap-2.5 sm:gap-3.5 w-full py-2">
                 {currentQ.parts.map((_, i) => (
                   <div
                     key={i}
-                    className="w-16 sm:w-20 h-14 sm:h-16 rounded-2xl border-2 border-dashed border-amber-300 bg-white/60 flex items-center justify-center text-slate-300 font-black text-sm"
+                    className="w-16 sm:w-20 h-14 sm:h-16 rounded-2xl border-2 border-dashed border-amber-300 bg-white/60 flex flex-col items-center justify-center text-amber-500 font-black text-xs sm:text-sm shadow-xs"
                   >
-                    {i + 1}
+                    <span className="text-[10px] text-amber-400 font-bold">مَقْطَع</span>
+                    <span className="text-sm sm:text-base font-black">{i + 1}</span>
                   </div>
                 ))}
               </div>
+            ) : placedTiles.length < currentQ.parts.length ? (
+              /* Level 1: Syllables being arranged in separate cards with remaining slots */
+              <div className="flex items-center justify-center flex-wrap gap-2.5 sm:gap-3.5 w-full py-1">
+                <AnimatePresence>
+                  {placedTiles.map((tile, idx) => (
+                    <motion.div
+                      key={tile.id}
+                      initial={{ scale: 0.6, y: -10, opacity: 0 }}
+                      animate={{ scale: 1, y: 0, opacity: 1 }}
+                      exit={{ scale: 0.6, opacity: 0 }}
+                      transition={{ type: 'spring', stiffness: 450, damping: 25 }}
+                      onClick={() => handleReturnTile(idx)}
+                      className="px-4 py-2.5 sm:px-6 sm:py-3 rounded-2xl bg-white border-2 border-amber-400 border-b-4 border-b-amber-600 text-slate-900 font-black text-3xl sm:text-4xl shadow-md cursor-pointer hover:scale-105 active:scale-95 transition-transform leading-snug tracking-normal relative group select-none"
+                      title="اِضْغَطْ لِإِعَادَةِ هَذِهِ البِطَاقَةِ"
+                    >
+                      {tile.text}
+                      {answeredState !== 'correct' && (
+                        <span className="absolute -top-2 -left-2 w-5 h-5 bg-rose-500 text-white rounded-full text-xs flex items-center justify-center opacity-80 group-hover:opacity-100 shadow-xs">
+                          ×
+                        </span>
+                      )}
+                    </motion.div>
+                  ))}
+                </AnimatePresence>
+                {/* Remaining empty slots */}
+                {Array.from({ length: currentQ.parts.length - placedTiles.length }).map((_, emptyIdx) => {
+                  const slotNumber = placedTiles.length + emptyIdx + 1;
+                  return (
+                    <div
+                      key={`empty-slot-${slotNumber}`}
+                      className="w-16 sm:w-20 h-14 sm:h-16 rounded-2xl border-2 border-dashed border-amber-300/70 bg-amber-50/50 flex flex-col items-center justify-center text-amber-400 font-bold text-xs sm:text-sm"
+                    >
+                      <span className="text-[10px] text-amber-300 font-bold">مَقْطَع</span>
+                      <span className="text-sm font-black">{slotNumber}</span>
+                    </div>
+                  );
+                })}
+              </div>
             ) : (
-              <AnimatePresence>
-                {placedTiles.map((tile, idx) => (
-                  <motion.div
-                    key={tile.id}
-                    initial={{ scale: 0.6, y: -10, opacity: 0 }}
-                    animate={{ scale: 1, y: 0, opacity: 1 }}
-                    exit={{ scale: 0.6, opacity: 0 }}
-                    transition={{ type: 'spring', stiffness: 450, damping: 25 }}
-                    onClick={() => handleReturnTile(idx)}
-                    className="px-5 py-3 sm:px-6 sm:py-3.5 rounded-2xl bg-white border-2 border-purple-400 border-b-4 border-b-purple-600 text-slate-900 font-black text-3xl sm:text-4xl shadow-md cursor-pointer hover:scale-105 active:scale-95 transition-transform leading-snug tracking-wider relative group"
-                    title="اِضْغَطْ لِإِعَادَةِ هَذِهِ البِطَاقَةِ"
-                  >
-                    {tile.text}
-                    {answeredState !== 'correct' && (
-                      <span className="absolute -top-2 -left-2 w-5 h-5 bg-rose-500 text-white rounded-full text-xs flex items-center justify-center opacity-80 group-hover:opacity-100 shadow-xs">
-                        ×
-                      </span>
-                    )}
-                  </motion.div>
-                ))}
-              </AnimatePresence>
+              /* ── Level 1: ALL SYLLABLES PLACED: THEY STICK AND CONNECT TOGETHER TO FORM THE CONNECTED WORD ── */
+              <motion.div
+                initial={{ scale: 0.88, y: -4 }}
+                animate={{ scale: [0.94, 1.05, 1], y: 0 }}
+                transition={{ type: 'spring', stiffness: 450, damping: 20 }}
+                className="w-full flex flex-col items-center justify-center py-1"
+              >
+                {/* Connected Unified Word Banner: gap-0 so syllables stick and touch */}
+                <div
+                  className={`inline-flex items-center justify-center dir-rtl gap-0 py-3 sm:py-4 px-6 sm:px-10 rounded-3xl bg-white shadow-xl border-3 transition-all ${
+                    answeredState === 'correct'
+                      ? 'border-emerald-500 shadow-emerald-500/25 bg-gradient-to-b from-white to-emerald-50/70'
+                      : answeredState === 'wrong'
+                      ? 'border-rose-400 shadow-rose-500/15 bg-gradient-to-b from-white to-rose-50/70'
+                      : 'border-amber-400 shadow-amber-500/20 bg-gradient-to-b from-white to-amber-50/70'
+                  }`}
+                >
+                  {placedTiles.map((tile, idx) => (
+                    <span
+                      key={tile.id}
+                      onClick={() => handleReturnTile(idx)}
+                      className={`font-black text-4xl sm:text-5xl md:text-6xl inline p-0 m-0 leading-none tracking-normal select-none transition-colors cursor-pointer ${
+                        answeredState === 'correct'
+                          ? 'text-emerald-700'
+                          : answeredState === 'wrong'
+                          ? 'text-rose-700'
+                          : 'text-slate-900 hover:text-amber-700'
+                      }`}
+                      title={
+                        answeredState === 'correct'
+                          ? 'كَلِمَةٌ مُتَّصِلَةٌ مُكْتَمِلَةٌ'
+                          : 'اِضْغَطْ لِإِعَادَةِ هَذَا المَقْطَعِ'
+                      }
+                    >
+                      {tile.text}
+                    </span>
+                  ))}
+                </div>
+
+                {/* Clear status badge */}
+                <div className="mt-2.5">
+                  {answeredState === 'correct' ? (
+                    <span className="inline-flex items-center gap-1.5 text-xs sm:text-sm font-black text-emerald-800 bg-emerald-100 px-3.5 py-1 rounded-full shadow-xs animate-bounce-slow">
+                      <span>✨</span>
+                      <span>تَشَكَّلَتِ الكَلِمَةُ مُتَّصِلَةً بِنَجَاحٍ!</span>
+                    </span>
+                  ) : answeredState === 'wrong' ? (
+                    <span className="inline-flex items-center gap-1.5 text-xs sm:text-sm font-black text-rose-800 bg-rose-100 px-3.5 py-1 rounded-full shadow-xs">
+                      <span>⚠️</span>
+                      <span>تَرْتِيبُ المَقَاطِعِ غَيْرُ صَحِيحٍ، اِضْغَطْ عَلَى مَقْطَعٍ لِتَعْدِيلِهِ</span>
+                    </span>
+                  ) : (
+                    <span className="inline-flex items-center gap-1.5 text-xs sm:text-sm font-black text-amber-800 bg-amber-100 px-3.5 py-1 rounded-full shadow-xs">
+                      <span>🔗</span>
+                      <span>اتَّصَلَتِ المَقَاطِعُ! اضْغَطْ «تَحَقَّقْ» لِلتَّأْكِيدِ</span>
+                    </span>
+                  )}
+                </div>
+              </motion.div>
             )}
           </div>
 
           {/* Guide hint */}
-          {level !== 2 && (
-            <div className="text-xs sm:text-sm font-extrabold text-slate-500 mb-2">
-              {level === 3
-                ? '👆 اِضْغَطْ عَلَى الجُمَلِ بِالتَّرْتِيبِ الزَّمَنِيِّ لِتَكْوِينِ القِصَّةِ:'
-                : '👆 اِضْغَطْ عَلَى البِطَاقَاتِ بِالتَّرْتِيبِ لِوَضْعِهَا فِي المَكَانِ الصَّحِيحِ:'}
-            </div>
-          )}
+          <div className="text-xs sm:text-sm font-extrabold text-slate-500 mb-2">
+            {level === 1
+              ? '👆 اِضْغَطْ عَلَى المَقَاطِعِ بِالتَّرْتِيبِ، وَعِنْدَ وَضْعِ آخِرِ مَقْطَعٍ تَتَّصِلُ الكَلِمَةُ:'
+              : level === 2
+              ? '👆 اِضْغَطْ عَلَى الكَلِمَاتِ بِالتَّرْتِيبِ لِتَرْكِيبِ الجُمْلَةِ:'
+              : '👆 اِضْغَطْ عَلَى الجُمَلِ بِالتَّرْتِيبِ الزَّمَنِيِّ لِتَكْوِينِ القِصَّةِ:'}
+          </div>
 
           {/* ── AVAILABLE TILES POOL (Juicy 3D Learning Blocks / Sentence Strips) ── */}
           {level === 3 ? (
@@ -1079,7 +1245,11 @@ export default function App() {
             setQuestionIndex(0);
             setScore(0);
           }}
-          onNextLevel={() => handleSwitchLevel(level === 1 ? 2 : 3)}
+          onNextLevel={() => {
+            const nextLvl = (level === 1 ? 2 : 3) as LevelId;
+            unlockLevel(nextLvl);
+            handleSwitchLevel(nextLvl);
+          }}
           onBackToFirst={() => handleSwitchLevel(1)}
         />
       )}
