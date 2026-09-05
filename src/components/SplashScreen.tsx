@@ -56,11 +56,11 @@ export const SplashScreen: React.FC<SplashScreenProps> = ({
       {isOpen && (
         <motion.div
           key="splash-root"
-          initial={{ opacity: 0 }}
+          initial={false}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0, scale: 1.02 }}
           transition={{ duration: 0.5, ease: 'easeInOut' }}
-          className="fixed inset-0 z-50 overflow-hidden select-none bg-[#011412] font-sans"
+          className="fixed inset-0 z-[99999] overflow-hidden select-none bg-[#011412] font-sans"
         >
           {/* ════════════════════════════════════════════════════════════════
               STAGE 1: COMPACT APP ICON COVER (شاشة الأيقونة الأولى لمدة 5 ثوانٍ بدون أزرار أو شاشات انتظار)
@@ -68,7 +68,7 @@ export const SplashScreen: React.FC<SplashScreenProps> = ({
           {stage === 'icon' ? (
             <motion.div
               key="stage-icon"
-              initial={{ opacity: 0 }}
+              initial={false}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0, scale: 0.98 }}
               transition={{ duration: 0.5, ease: 'easeInOut' }}

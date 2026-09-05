@@ -554,8 +554,22 @@ export default function App() {
   const earnedStars = score >= 8 ? 3 : score >= 5 ? 2 : score >= 2 ? 1 : 0;
   const progressPercent = ((questionIndex + 1) / currentQuestions.length) * 100;
 
+  // Render Splash Screen directly during intro sequence so app activities never flash first
+  if (introState.isOpen) {
+    return (
+      <SplashScreen
+        isOpen={true}
+        initialStage={introState.initialStage}
+        onClose={handleCloseSplash}
+      />
+    );
+  }
+
   return (
-    <main
+    <motion.main
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      transition={{ duration: 0.35, ease: 'easeOut' }}
       className="min-h-screen bg-gradient-to-br from-[#FFF5F9] via-[#F0F7FF] to-[#FFFDF0] p-3 sm:p-6 flex flex-col justify-between select-none text-slate-900 relative overflow-hidden font-sans"
       dir="rtl"
     >
@@ -572,13 +586,6 @@ export default function App() {
       <div className="absolute bottom-16 right-10 text-3xl sm:text-4xl opacity-30 animate-soft-float pointer-events-none select-none">
         ✨
       </div>
-
-      {/* ── FULL-SCREEN INTERACTIVE STARTUP & WELCOME SPLASH SCREEN ── */}
-      <SplashScreen
-        isOpen={introState.isOpen}
-        initialStage={introState.initialStage}
-        onClose={handleCloseSplash}
-      />
 
       {/* ── PWA IN-APP INSTALL PROMPT (Auto-hidden if standalone/installed) ── */}
       <PWAInstallButton />
@@ -698,13 +705,13 @@ export default function App() {
             <span
               className={`text-[11px] sm:text-xs font-extrabold mt-0.5 whitespace-nowrap ${
                 !unlockedLevels.includes(2)
-                  ? 'text-amber-700/80 font-black'
+                  ? 'text-slate-400'
                   : level === 2
                   ? 'text-sky-100'
                   : 'text-slate-500'
               }`}
             >
-              {!unlockedLevels.includes(2) ? 'مُغْلَقٌ 🔒' : 'كَلِمَاتٌ ← جُمْلَةٌ'}
+              كَلِمَاتٌ ← جُمْلَةٌ
             </span>
           </button>
 
@@ -727,13 +734,13 @@ export default function App() {
             <span
               className={`text-[11px] sm:text-xs font-extrabold mt-0.5 whitespace-nowrap ${
                 !unlockedLevels.includes(3)
-                  ? 'text-amber-700/80 font-black'
+                  ? 'text-slate-400'
                   : level === 3
                   ? 'text-teal-100'
                   : 'text-slate-500'
               }`}
             >
-              {!unlockedLevels.includes(3) ? 'مُغْلَقٌ 🔒' : 'جُمَلٌ ← قِصَّةٌ'}
+              جُمَلٌ ← قِصَّةٌ
             </span>
           </button>
         </div>
@@ -1253,6 +1260,6 @@ export default function App() {
           onBackToFirst={() => handleSwitchLevel(1)}
         />
       )}
-    </main>
+    </motion.main>
   );
 }

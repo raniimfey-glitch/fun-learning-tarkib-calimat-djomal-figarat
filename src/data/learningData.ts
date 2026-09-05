@@ -92,11 +92,11 @@ export const INITIAL_DATA: Record<number, Question[]> = {
     {
       id: 'q1-5',
       type: 'syllables',
-      emoji: '🐔',
-      word: 'دَجَاجَةٌ',
-      plainWord: 'دجاجة',
-      parts: ['دَ', 'ـجَا', 'جَـ', 'ةٌ'],
-      phoneticHint: 'مد الألف في (جَا) يستغرق حركتين صوتيتين مع جهر الجيم.',
+      emoji: '🏫',
+      word: 'مَدْرَسَةٌ',
+      plainWord: 'مدرسة',
+      parts: ['مَدْ', 'رَ', 'سَـ', 'ـةٌ'],
+      phoneticHint: 'المقطع الساكن (مَدْ)، ثم الراء (رَ)، ثم السين بذراع يساراً (سَـ)، والتاء المربوطة بذراع يميناً (ـةٌ).',
     },
     {
       id: 'q1-6',
