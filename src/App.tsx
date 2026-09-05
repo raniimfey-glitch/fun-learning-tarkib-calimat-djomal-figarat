@@ -27,6 +27,7 @@ import { AIPronunciationSheet } from './components/AIPronunciationSheet';
 import { CelebrationModal } from './components/CelebrationModal';
 import { PWAInstallButton } from './components/PWAInstallButton';
 import { SplashScreen } from './components/SplashScreen';
+import { normalizeArabicText } from './utils/arabicMatcher';
 
 /**
  * Shuffles parts ensuring they are strictly randomized and NEVER remain in their original sorted order.
@@ -234,7 +235,12 @@ export default function App() {
 
     const userText = placedTiles.map((t) => t.text).join('|');
     const correctText = currentQ.parts.join('|');
-    const isCorrect = userText === correctText;
+    const isExactMatch = userText === correctText;
+    const isNormalizedMatch =
+      placedTiles.length === currentQ.parts.length &&
+      normalizeArabicText(placedTiles.map((t) => t.text).join('')) ===
+        normalizeArabicText(currentQ.parts.join(''));
+    const isCorrect = isExactMatch || isNormalizedMatch;
 
     if (isCorrect) {
       setAnsweredState('correct');

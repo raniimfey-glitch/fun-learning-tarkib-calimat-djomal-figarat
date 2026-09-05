@@ -24,12 +24,12 @@ export const SplashScreen: React.FC<SplashScreenProps> = ({
     }
   }, [isOpen, initialStage]);
 
-  // Stage 1 (Icon Cover): Display full-screen icon for 2 seconds then transition to welcome screen
+  // Stage 1 (Icon Cover): Display app icon for 5 seconds without any buttons or cues, then transition to welcome screen
   useEffect(() => {
     if (!isOpen || stage !== 'icon') return;
     const timer = setTimeout(() => {
       setStage('welcome');
-    }, 2000);
+    }, 5000);
     return () => clearTimeout(timer);
   }, [isOpen, stage]);
 
@@ -63,7 +63,7 @@ export const SplashScreen: React.FC<SplashScreenProps> = ({
           className="fixed inset-0 z-50 overflow-hidden select-none bg-[#011412] font-sans"
         >
           {/* ════════════════════════════════════════════════════════════════
-              STAGE 1: COMPACT APP ICON (الشاشة الأولى: الاحتفاظ بالأيقونة الأصغر حجماً فقط وحذف الكبيرة)
+              STAGE 1: COMPACT APP ICON COVER (شاشة الأيقونة الأولى لمدة 5 ثوانٍ بدون أزرار أو شاشات انتظار)
              ════════════════════════════════════════════════════════════════ */}
           {stage === 'icon' ? (
             <motion.div
@@ -76,15 +76,14 @@ export const SplashScreen: React.FC<SplashScreenProps> = ({
               className="relative w-full h-full flex flex-col items-center justify-center cursor-pointer bg-[#011412] overflow-hidden"
               title="اِضْغَطْ لِلانْتِقَالِ لِلشَّاشَةِ التَّرْحِيبِيَّةِ"
             >
-              {/* Ambient backdrop glow */}
+              {/* Static subtle dark background - calm and restful for the eyes */}
               <div className="absolute inset-0 pointer-events-none overflow-hidden">
-                <div className="absolute inset-0 bg-gradient-to-b from-[#003d37]/40 via-[#011412] to-[#011412]" />
-                <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-80 h-80 rounded-full bg-[#00C9B7]/15 blur-3xl" />
+                <div className="absolute inset-0 bg-gradient-to-b from-[#002622]/40 via-[#011412] to-[#011412]" />
               </div>
 
-              {/* Smaller App Icon (الصورة الأولى الأصغر حجماً فقط) */}
+              {/* Centered App Icon - strictly no buttons, no extra pills */}
               <motion.div
-                initial={{ scale: 0.9, opacity: 0.8 }}
+                initial={{ scale: 0.92, opacity: 0.85 }}
                 animate={{ scale: 1, opacity: 1 }}
                 transition={{ duration: 0.5, ease: 'easeOut' }}
                 className="relative z-10 flex flex-col items-center"
@@ -96,32 +95,26 @@ export const SplashScreen: React.FC<SplashScreenProps> = ({
                       alt="أيقونة تركيب كلمات وجمل وفقرات"
                       className="w-full h-full object-cover"
                     />
-                    {/* Sweeping Light Sheen */}
+                    {/* Subtle Sheen directly on icon */}
                     <motion.div
                       animate={{
                         x: ['-150%', '220%'],
                       }}
                       transition={{
-                        duration: 1.8,
+                        duration: 2.2,
                         repeat: Infinity,
-                        repeatDelay: 1,
+                        repeatDelay: 1.5,
                         ease: 'easeInOut',
                       }}
                       className="absolute inset-0 w-1/2 h-full bg-gradient-to-r from-transparent via-white/30 to-transparent -skew-x-12 pointer-events-none"
                     />
                   </div>
                 </div>
-
-                {/* Bottom Cue */}
-                <div className="mt-8 px-4 py-1.5 rounded-full bg-black/40 backdrop-blur-md border border-white/15 text-teal-200/90 text-xs font-bold flex items-center gap-2">
-                  <span className="w-2 h-2 rounded-full bg-[#00C9B7] animate-ping" />
-                  <span>جَارٍ الفَتْحُ...</span>
-                </div>
               </motion.div>
             </motion.div>
           ) : (
             /* ════════════════════════════════════════════════════════════════
-               STAGE 2: REDESIGNED WELCOME SCREEN (الشاشة الترحيبية المستحدثة)
+               STAGE 2: WELCOME SCREEN (الشاشة الترحيبية - البريق والشعاع مقتصر على الأيقونة فقط)
                - عنوان التطبيق: تَرْكِيبُ كَلِمَاتٍ وَجُمَلٍ وَفِقْرَاتٍ
                - العنوان الفرعي: تَعَلَّمِ القِرَاءَةَ وَالتَّرْكِيبَ بِمَرَحٍ
                - عبارة الشعار: ✨️ التعلم الممتع - رنيم فاي ✨️
@@ -134,72 +127,14 @@ export const SplashScreen: React.FC<SplashScreenProps> = ({
               exit={{ opacity: 0, scale: 1.03 }}
               transition={{ duration: 0.6, ease: 'easeInOut' }}
               onClick={onClose}
-              className="relative w-full h-full flex flex-col items-center justify-between text-center px-4 py-8 sm:py-12 bg-[#021b18] cursor-pointer"
+              className="relative w-full h-full flex flex-col items-center justify-between text-center px-4 py-8 sm:py-12 bg-[#011412] cursor-pointer overflow-hidden"
             >
-              {/* ── FLUID AMBIENT GLOW & ENERGY WAVES IN BRAND TEAL (#00C9B7) ── */}
+              {/* Calm, soothing background without any moving flashing blobs or blinding flashes */}
               <div className="absolute inset-0 pointer-events-none overflow-hidden">
-                <div className="absolute inset-0 bg-gradient-to-b from-[#003d37] via-[#022421] to-[#011412]" />
-
-                <motion.div
-                  animate={{
-                    scale: [1, 1.25, 1],
-                    x: [-20, 25, -20],
-                    y: [-15, 20, -15],
-                    rotate: [0, 90, 180, 270, 360],
-                  }}
-                  transition={{ duration: 18, repeat: Infinity, ease: 'linear' }}
-                  className="absolute -top-24 -left-20 w-96 h-96 rounded-full bg-gradient-to-tr from-[#00C9B7]/35 via-teal-400/25 to-emerald-400/20 blur-3xl"
-                />
-
-                <motion.div
-                  animate={{
-                    scale: [1.2, 1, 1.2],
-                    x: [30, -25, 30],
-                    y: [20, -25, 20],
-                  }}
-                  transition={{ duration: 14, repeat: Infinity, ease: 'easeInOut' }}
-                  className="absolute top-1/3 -right-24 w-[32rem] h-[32rem] rounded-full bg-gradient-to-bl from-[#00C9B7]/30 via-teal-500/25 to-cyan-500/20 blur-3xl"
-                />
-
-                <motion.div
-                  animate={{
-                    scale: [1, 1.3, 1],
-                    opacity: [0.3, 0.6, 0.3],
-                  }}
-                  transition={{ duration: 10, repeat: Infinity, ease: 'easeInOut' }}
-                  className="absolute -bottom-20 left-1/4 w-80 h-80 rounded-full bg-gradient-to-t from-[#00C9B7]/30 via-teal-400/20 to-transparent blur-3xl"
-                />
-
-                {/* Floating Bokeh Stars */}
-                {[...Array(12)].map((_, i) => (
-                  <motion.div
-                    key={i}
-                    className="absolute rounded-full bg-white shadow-[0_0_10px_#00C9B7]"
-                    style={{
-                      width: i % 3 === 0 ? '6px' : i % 2 === 0 ? '4px' : '3px',
-                      height: i % 3 === 0 ? '6px' : i % 2 === 0 ? '4px' : '3px',
-                      top: `${(i * 8.3 + 12) % 90}%`,
-                      left: `${(i * 15.7 + 8) % 92}%`,
-                      opacity: 0.25 + (i % 4) * 0.18,
-                    }}
-                    animate={{
-                      y: [0, -25, 0],
-                      opacity: [0.2, 0.85, 0.2],
-                      scale: [0.8, 1.3, 0.8],
-                    }}
-                    transition={{
-                      duration: 3.5 + (i % 5),
-                      repeat: Infinity,
-                      delay: (i * 0.4) % 3,
-                      ease: 'easeInOut',
-                    }}
-                  />
-                ))}
-
-                <div className="absolute -inset-full bg-gradient-to-tr from-transparent via-white/[0.04] to-transparent rotate-45 pointer-events-none" />
+                <div className="absolute inset-0 bg-gradient-to-b from-[#00221e]/60 via-[#011412] to-[#011412]" />
               </div>
 
-              {/* ── UPPER-MIDDLE AREA: 3D ANIMATED APP ICON WITH BRAND TEAL NEON GLOW ── */}
+              {/* ── UPPER-MIDDLE AREA: APP ICON WITH GLOW & SHEEN STRICTLY ON THE ICON ── */}
               <div className="flex flex-col items-center justify-center z-10 my-auto w-full max-w-sm">
                 <motion.div
                   initial={{ scale: 0.7, y: 30, opacity: 0 }}
@@ -207,39 +142,20 @@ export const SplashScreen: React.FC<SplashScreenProps> = ({
                   transition={{ type: 'spring', stiffness: 260, damping: 20, delay: 0.1 }}
                   className="relative mb-6"
                 >
-                  {/* Deep Centered Ambient Radial Halo in Brand Teal */}
-                  <motion.div
-                    animate={{
-                      scale: [1, 1.1, 1],
-                      opacity: [0.45, 0.7, 0.45],
-                    }}
-                    transition={{ duration: 3.5, repeat: Infinity, ease: 'easeInOut' }}
-                    className="absolute -inset-10 rounded-full bg-gradient-to-tr from-[#00C9B7]/45 via-teal-400/35 to-emerald-400/30 blur-2xl pointer-events-none"
-                  />
+                  {/* Subtle, soft ambient glow strictly localized behind the icon */}
+                  <div className="absolute -inset-6 rounded-full bg-[#00C9B7]/25 blur-2xl pointer-events-none" />
 
-                  {/* Harmonious Single Neon Glow Halo in Brand Teal */}
+                  {/* High-Resolution Rounded-Square App Icon with focused sheen */}
                   <motion.div
                     animate={{
-                      scale: [1, 1.06, 1],
-                      opacity: [0.55, 0.8, 0.55],
-                    }}
-                    transition={{ duration: 3.5, repeat: Infinity, ease: 'easeInOut' }}
-                    className="absolute -inset-3 rounded-[30px] bg-gradient-to-tr from-[#00C9B7] via-teal-400 to-cyan-300 blur-xl opacity-65 pointer-events-none"
-                  />
-
-                  {/* High-Resolution Rounded-Square App Icon with 3D Floating & Shimmer Animation */}
-                  <motion.div
-                    animate={{
-                      y: [0, -10, 0],
-                      rotate: [-2, 2, -2],
-                      scale: [1, 1.03, 1],
+                      y: [0, -6, 0],
                     }}
                     transition={{
-                      duration: 4,
+                      duration: 3.5,
                       repeat: Infinity,
                       ease: 'easeInOut',
                     }}
-                    className="relative w-28 h-28 sm:w-32 sm:h-32 rounded-[20px] p-[3px] bg-gradient-to-b from-white/80 via-[#00C9B7]/50 to-white/20 shadow-[0_20px_50px_rgba(0,201,183,0.45)] backdrop-blur-xl select-none"
+                    className="relative w-28 h-28 sm:w-32 sm:h-32 rounded-[20px] p-[2.5px] bg-gradient-to-b from-white/80 via-[#00C9B7]/50 to-white/20 shadow-[0_16px_38px_rgba(0,201,183,0.35)] backdrop-blur-xl select-none"
                   >
                     <div className="w-full h-full rounded-[17px] overflow-hidden bg-slate-900 border border-white/30 relative">
                       <img
@@ -249,13 +165,13 @@ export const SplashScreen: React.FC<SplashScreenProps> = ({
                         className="w-full h-full object-cover"
                       />
 
-                      {/* Dynamic Light Sheen sweep */}
+                      {/* Sheen sweep on the icon itself */}
                       <motion.div
                         animate={{
                           x: ['-150%', '200%'],
                         }}
                         transition={{
-                          duration: 3,
+                          duration: 2.5,
                           repeat: Infinity,
                           repeatDelay: 2,
                           ease: 'easeInOut',
@@ -264,29 +180,13 @@ export const SplashScreen: React.FC<SplashScreenProps> = ({
                       />
                     </div>
 
-                    {/* Floating Sparkles around icon */}
-                    <motion.span
-                      animate={{
-                        scale: [0.8, 1.3, 0.8],
-                        rotate: [0, 90, 180],
-                        opacity: [0.5, 1, 0.5],
-                      }}
-                      transition={{ duration: 2.8, repeat: Infinity, ease: 'easeInOut' }}
-                      className="absolute -top-2 -right-2 text-[#00C9B7] text-base drop-shadow-[0_0_10px_rgba(0,201,183,0.9)] pointer-events-none"
-                    >
+                    {/* Subtle sparkles localized right on the icon corners */}
+                    <span className="absolute -top-1.5 -right-1.5 text-[#00C9B7] text-sm drop-shadow-[0_0_8px_rgba(0,201,183,0.8)] pointer-events-none">
                       ✨
-                    </motion.span>
-                    <motion.span
-                      animate={{
-                        scale: [1.2, 0.7, 1.2],
-                        rotate: [180, 90, 0],
-                        opacity: [0.4, 0.95, 0.4],
-                      }}
-                      transition={{ duration: 3.2, repeat: Infinity, ease: 'easeInOut', delay: 1 }}
-                      className="absolute -bottom-1 -left-2 text-teal-200 text-sm drop-shadow-[0_0_8px_rgba(0,201,183,0.8)] pointer-events-none"
-                    >
-                      ⭐
-                    </motion.span>
+                    </span>
+                    <span className="absolute -bottom-1 -left-1.5 text-teal-200 text-xs drop-shadow-[0_0_6px_rgba(0,201,183,0.7)] pointer-events-none">
+                      ✨
+                    </span>
                   </motion.div>
                 </motion.div>
 
