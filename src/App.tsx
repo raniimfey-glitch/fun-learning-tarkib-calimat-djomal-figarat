@@ -131,7 +131,10 @@ export default function App() {
   // Unlocked levels progression: Level 1 unlocked by default. Level 2 unlocks only after completing Level 1. Level 3 unlocks only after completing Level 2.
   const [unlockedLevels, setUnlockedLevels] = useState<number[]>(() => {
     try {
-      const saved = localStorage.getItem('arabic_app_unlocked_levels');
+      // Purge previous storage keys to ensure Level 2 is strictly locked initially
+      localStorage.removeItem('arabic_app_unlocked_levels');
+      localStorage.removeItem('arabic_app_unlocked_levels_v2');
+      const saved = localStorage.getItem('arabic_app_unlocked_levels_v4');
       if (saved) {
         const parsed = JSON.parse(saved);
         if (Array.isArray(parsed) && parsed.includes(1)) {
@@ -149,7 +152,7 @@ export default function App() {
       if (prev.includes(levelToUnlock)) return prev;
       const updated = [...prev, levelToUnlock];
       try {
-        localStorage.setItem('arabic_app_unlocked_levels', JSON.stringify(updated));
+        localStorage.setItem('arabic_app_unlocked_levels_v4', JSON.stringify(updated));
       } catch (e) {
         // ignore
       }
