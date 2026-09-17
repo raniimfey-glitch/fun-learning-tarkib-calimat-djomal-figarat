@@ -7,6 +7,7 @@ import {
   RotateCcw,
   CheckCircle,
   Sparkles,
+  Volume2,
 } from 'lucide-react';
 import confetti from 'canvas-confetti';
 import { LevelId, Question, PlacedTile, AIPronunciationFeedback } from './types';
@@ -257,6 +258,63 @@ export default function App() {
       );
     }
   }, [currentQ, answeredState, level, shuffledTiles]);
+
+  // Dedicated Audio Pronunciation Button: pronounces cards before arrangement (with stop toggle)
+  const handleToggleTilesPronunciation = useCallback(() => {
+    if (!currentQ || answeredState === 'correct') return;
+
+    if (isPlayingAudio) {
+      stopAllSpeech();
+      setIsPlayingAudio(false);
+      setActiveReadingIndex(null);
+      setActionFeedback(null);
+      return;
+    }
+
+    stopAllSpeech();
+    setIsPlayingAudio(true);
+
+    setActionFeedback(
+      level === 1
+        ? '🔊 اِسْتَمِعْ لِنُطْقِ المَقَاطِعِ'
+        : level === 2
+        ? '🔊 اِسْتَمِعْ لِنُطْقِ الكَلِمَاتِ'
+        : '🔊 اِسْتَمِعْ لِنُطْقِ الجُمَلِ'
+    );
+
+    const partsToSpeak = shuffledTiles.length > 0 ? shuffledTiles : currentQ.parts;
+    speakSyllablesSequential(
+      partsToSpeak,
+      () => {
+        setIsPlayingAudio(false);
+        setActiveReadingIndex(null);
+        setTimeout(() => setActionFeedback(null), 1500);
+      },
+      level === 3 ? 0.85 : 0.8,
+      (stepIndex) => {
+        setActiveReadingIndex(stepIndex >= 0 ? stepIndex : null);
+      }
+    );
+  }, [currentQ, answeredState, isPlayingAudio, level, shuffledTiles]);
+
+  // Single Tile Audition (pronounce single card without placing it)
+  const handleSpeakSingleTile = useCallback(
+    (tileText: string, tileIndex: number) => {
+      stopAllSpeech();
+      setIsPlayingAudio(true);
+      setActiveReadingIndex(tileIndex);
+      playTileSnapSound();
+      const clean = tileText.replace(/[ـ\-]/g, '');
+      speakArabic(clean, {
+        rate: level === 3 ? 0.85 : 0.8,
+        onEnd: () => {
+          setIsPlayingAudio(false);
+          setActiveReadingIndex(null);
+        },
+      });
+    },
+    [level]
+  );
 
   // Verify Answer with Confetti & Sounds
   const handleVerify = useCallback(() => {
@@ -1043,13 +1101,43 @@ export default function App() {
             )}
           </div>
 
-          {/* Guide hint */}
-          <div className="text-xs sm:text-sm font-extrabold text-slate-500 mb-2">
-            {level === 1
-              ? '👆 اِضْغَطْ عَلَى المَقَاطِعِ بِالتَّرْتِيبِ، وَعِنْدَ وَضْعِ آخِرِ مَقْطَعٍ تَتَّصِلُ الكَلِمَةُ:'
-              : level === 2
-              ? '👆 اِضْغَطْ عَلَى الكَلِمَاتِ بِالتَّرْتِيبِ لِتَرْكِيبِ الجُمْلَةِ:'
-              : '👆 اِضْغَطْ عَلَى الجُمَلِ بِالتَّرْتِيبِ الزَّمَنِيِّ لِتَكْوِينِ القِصَّةِ:'}
+          {/* ── TILES SECTION BAR: Guide hint + Dedicated Pronunciation Button ── */}
+          <div className="w-full flex flex-wrap items-center justify-between gap-2.5 mb-2.5 bg-slate-50/95 border border-slate-200/90 rounded-2xl py-2 px-3 sm:px-4 shadow-xs">
+            <div className="text-xs sm:text-sm font-black text-slate-700 flex items-center gap-1.5">
+              <span>👆</span>
+              <span>
+                {level === 1
+                  ? 'رَتِّبِ المَقَاطِعَ، أَوِْ اسْتَمِعْ لَهَا أَوَّلاً:'
+                  : level === 2
+                  ? 'رَتِّبِ الكَلِمَاتِ، أَوِْ اسْتَمِعْ لَهَا أَوَّلاً:'
+                  : 'رَتِّبِ الجُمَلَ، أَوِْ اسْتَمِعْ لَهَا أَوَّلاً:'}
+              </span>
+            </div>
+
+            {/* زر الاستماع لنطق بطاقات المقاطع والجمل قبل ترتيبها */}
+            <button
+              type="button"
+              id="listen-tiles-button"
+              onClick={handleToggleTilesPronunciation}
+              disabled={answeredState === 'correct'}
+              className={`py-2 px-3.5 sm:px-4 rounded-xl font-black text-xs sm:text-sm transition-all shadow-sm flex items-center gap-2 border-b-2 active:translate-y-0.5 active:border-b-0 cursor-pointer select-none ${
+                isPlayingAudio && activeReadingIndex !== null
+                  ? 'bg-gradient-to-r from-amber-500 to-orange-500 text-white border-amber-700 ring-2 ring-amber-300 animate-pulse'
+                  : 'bg-gradient-to-r from-sky-500 via-indigo-500 to-purple-600 hover:from-sky-600 hover:to-purple-700 text-white border-indigo-700 shadow-indigo-500/20'
+              }`}
+              title="اسْتَمِعْ لِنُطْقِ جَمِيعِ البَطَاقَاتِ قَبْلَ تَرْتِيبِهَا"
+            >
+              <Volume2 className={`w-4 h-4 shrink-0 ${isPlayingAudio && activeReadingIndex !== null ? 'animate-bounce' : ''}`} />
+              <span>
+                {isPlayingAudio && activeReadingIndex !== null
+                  ? 'إِيقَافُ النُّطْقِ ⏹️'
+                  : level === 1
+                  ? 'اسْتَمِعْ لِنُطْقِ المَقَاطِعِ 🔊'
+                  : level === 2
+                  ? 'اسْتَمِعْ لِنُطْقِ الكَلِمَاتِ 🔊'
+                  : 'اسْتَمِعْ لِنُطْقِ الجُمَلِ 🔊'}
+              </span>
+            </button>
           </div>
 
           {/* ── AVAILABLE TILES POOL (Juicy 3D Learning Blocks / Sentence Strips) ── */}
@@ -1074,13 +1162,18 @@ export default function App() {
                     }`}
                   >
                     <span
-                      className={`w-7 h-7 rounded-full border text-sm flex items-center justify-center shrink-0 font-black ${
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleSpeakSingleTile(part, originalIdx);
+                      }}
+                      title="اسْتَمِعْ لِهَذِهِ الجُمْلَةِ فَقَطْ"
+                      className={`w-8 h-8 rounded-full border text-sm flex items-center justify-center shrink-0 font-black cursor-pointer transition-all hover:scale-110 active:scale-95 ${
                         isReading
-                          ? 'bg-teal-600 text-white border-teal-700 animate-bounce'
-                          : 'bg-white/90 border-slate-300'
+                          ? 'bg-teal-600 text-white border-teal-700 animate-bounce shadow-sm'
+                          : 'bg-white text-teal-700 border-teal-200 hover:bg-teal-50 shadow-xs'
                       }`}
                     >
-                      {isReading ? '🔊' : '🔹'}
+                      {isReading ? '🔊' : '🔉'}
                     </span>
                     <span className="leading-relaxed flex-1">{part}</span>
                     {isReading && (
